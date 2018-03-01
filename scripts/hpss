@@ -32,7 +32,7 @@ def sizeof_fmt(num, suffix='B', fmt='%d'):
     return format % (num, 'Y', suffix)
 
 
-def print_report(root, delete=True, prefix='hpss'):
+def print_report(root, delete=True, prefix='hpss', small_files_max=0):
     '''Perform a query on the HPSS using hsi and print a report on the file
        sizes. `delete` indicates whether the log file should not be deleted when
        done. `prefix` gives the prefix for the log file.
@@ -53,13 +53,13 @@ def print_report(root, delete=True, prefix='hpss'):
 
     tmpfile.close()
 
-    print_report_from_log(tmpfile_name)
+    print_report_from_log(tmpfile_name, small_files_max=0)
 
     if delete:
         os.remove(tmpfile_name)
 
 
-def print_report_from_log(log_filename):
+def print_report_from_log(log_filename, small_files_max=0):
     '''Print the report given a log file.
     '''
     files, dirs = parse_log(log_filename)
@@ -74,6 +74,7 @@ def print_report_from_log(log_filename):
 
     print_filesizes(files)
     print_owners(files)
+    print_smallfiles(files, small_files_max)
 
 
 def print_filesizes(files):
@@ -124,6 +125,23 @@ def print_owners(files):
         print('%-12s %12s' % (o, locale.format('%d', owners[o], grouping=True)))
 
 
+def print_smallfiles(files, small_files_max):
+     if small_files_max == 0: return
+     print('')
+     print('%15s' % ('files < %s' % sizeof_fmt(small_files_max), ))
+     print('%15s' % ('-' * 15, ))
+     n_small_files = 0
+     for f in files:
+         if f['size'] < small_files_max:
+             n_small_files += 1
+             print('%6s %s' % (sizeof_fmt(f['size']), f['name']))
+     if n_small_files == 0:
+         print('no files under %s' % sizeof_fmt(small_files_max))
+     else:
+         print('')
+         print('%d files under %s' % (n_small_files, sizeof_fmt(small_files_max)))
+
+
 def parse_log(log_filename):
     '''Parse a log file, returning a list of dicts with fields 'name' (full
        path), 'size' (in bytes), and 'owner'.
@@ -139,17 +157,20 @@ def parse_log(log_filename):
                 next_is_dir = True
                 continue
             if next_is_dir:
-                current_dir = line[0:-1]
+                current_dir = line.strip()[0:-1]
                 dirs.append(current_dir)
                 next_is_dir = False
                 continue
 
             # permissions, links, owner, group, size, month, day, year, filename
             tokens = line.split()
+            permissions = tokens[0]
 
-            files.append({'name': current_dir + '/' + tokens[-1],
-                          'size': int(tokens[4]),
-                          'owner': tokens[2]})
+            # only a file if not 'd'
+            if permissions[0] != 'd':
+                files.append({'name': current_dir + '/' + tokens[-1],
+                              'size': int(tokens[4]),
+                              'owner': tokens[2]})
 
     return(files, dirs)
 
@@ -164,10 +185,12 @@ if __name__ == '__main__':
                         help='set to interpret root as a log file')
     parser.add_argument('-k', '--keep-log', action='store_true',
                         help='set to not delete log file')
+    parser.add_argument('-s', '--small-files-max', type=int, default=0,
+                        help='warn about files smaller than this size in bytes')
     args = parser.parse_args()
 
     for r in args.root:
         if args.file:
-            print_report_from_log(r)
+            print_report_from_log(r, args.small_files_max)
         else:
-            print_report(r, not args.keep_log, args.prefix)
+            print_report(r, not args.keep_log, args.prefix, args.small_files_max)
