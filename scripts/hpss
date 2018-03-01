@@ -1,6 +1,8 @@
 #!/usr/bin/env python
 
 import argparse
+import collections
+import locale
 import numpy as np
 import os
 import subprocess
@@ -15,6 +17,8 @@ P = 1024 * T
 
 # define the bins for the file size histogram
 BINS = [0, 1, 100, K, 10 * K , 100 * K, M, 10 * M, 100 * M, G, 10 * G, 100 * G, T, 10 * T, 2 * P]
+
+locale.setlocale(locale.LC_ALL, 'en_US')
 
 
 def sizeof_fmt(num, suffix='B', fmt='%d'):
@@ -58,11 +62,25 @@ def print_report(root, delete=True, prefix='hpss'):
 def print_report_from_log(log_filename):
     '''Print the report given a log file.
     '''
-    files = parse_log(log_filename)
+    files, dirs = parse_log(log_filename)
+
     if len(files) == 0:
         print('no files to report')
         return
 
+    print('%d %s' % (len(dirs), 'directory' if len(dirs) == 1 else 'directories'))
+
+    print('')
+
+    print_filesizes(files)
+    print_owners(files)
+
+
+def print_filesizes(files):
+    '''Print report on file sizes.
+    '''
+
+    # extract file size information
     sizes = np.array([f['size'] for f in files])
     n_files = len(files)
     total_size = sizes.sum()
@@ -71,17 +89,39 @@ def print_report_from_log(log_filename):
     indices = np.digitize(sizes, BINS)
 
     header_names = ('size range', 'n files', '% files', 'total', '% total')
-    header_sizes = (15, 8, 7, 10, 7)
+    header_sizes = (15, 12, 7, 10, 7)
 
     header_fmt = ' '.join('%%%ds' % s for s in header_sizes)
     underlines = tuple('-' * s for s in header_sizes)
+
     print(header_fmt % header_names)
     print(header_fmt % underlines)
 
     for i, h in enumerate(hist):
         ind, = np.where(indices == i + 1)
         bin_size = sizes[ind].sum()
-        print('%6s - %6s %8d %6.1f%% %10s %6.1f%%' % (sizeof_fmt(bins[i]), sizeof_fmt(bins[i+1]), h, 100.0 * h / n_files, sizeof_fmt(bin_size), 100.0 * bin_size / total_size))
+        print('%6s - %6s %12s %6.1f%% %10s %6.1f%%' % (sizeof_fmt(bins[i]), sizeof_fmt(bins[i+1]), locale.format('%d', h, grouping=True), 100.0 * h / n_files, sizeof_fmt(bin_size), 100.0 * bin_size / total_size))
+
+    print(header_fmt % underlines)
+    print('%15s %12s %6.1f%% %10s %6.1f%%' % ('Total', locale.format('%d', n_files, grouping=True), 100.0, sizeof_fmt(total_size), 100.0))
+
+
+def print_owners(files):
+    '''Print report on owners of files.
+    '''
+
+    print('')
+
+    # determine owners
+    owners = collections.defaultdict(int)
+    for f in files:
+        owners[f['owner']] += 1
+
+    print('%-12s %12s' % ('owner', 'n files'))
+    print('%12s %12s' % ('-' * 12, '-' * 12))
+
+    for o in owners:
+        print('%-12s %12s' % (o, locale.format('%d', owners[o], grouping=True)))
 
 
 def parse_log(log_filename):
@@ -89,6 +129,7 @@ def parse_log(log_filename):
        path), 'size' (in bytes), and 'owner'.
     '''
     files = []
+    dirs = []
     with open(log_filename, 'r') as f:
         f.seek(0)
         next_is_dir = False
@@ -99,6 +140,7 @@ def parse_log(log_filename):
                 continue
             if next_is_dir:
                 current_dir = line[0:-1]
+                dirs.append(current_dir)
                 next_is_dir = False
                 continue
 
@@ -109,7 +151,7 @@ def parse_log(log_filename):
                           'size': int(tokens[4]),
                           'owner': tokens[2]})
 
-    return(files)
+    return(files, dirs)
 
 
 if __name__ == '__main__':
@@ -128,4 +170,4 @@ if __name__ == '__main__':
         if args.file:
             print_report_from_log(r)
         else:
-            print_report(r, args.keep_log, args.prefix)
+            print_report(r, not args.keep_log, args.prefix)
