@@ -1,0 +1,131 @@
+#!/usr/bin/env python
+
+import argparse
+import numpy as np
+import os
+import subprocess
+import tempfile
+
+# define some constants to make defining the bins easier
+K = 1024
+M = 1024 * K
+G = 1024 * M
+T = 1024 * G
+P = 1024 * T
+
+# define the bins for the file size histogram
+BINS = [0, 1, 100, K, 10 * K , 100 * K, M, 10 * M, 100 * M, G, 10 * G, 100 * G, T, 10 * T, 2 * P]
+
+
+def sizeof_fmt(num, suffix='B', fmt='%d'):
+    '''Return a human readable string representing a number of bytes.
+    '''
+    format = '%s %%s%%s' % fmt
+    for unit in ['', 'K', 'M', 'G', 'T', 'P', 'E', 'Z']:
+        if abs(num) < 1024.0:
+            return format % (num, unit, suffix)
+        num /= 1024.0
+    return format % (num, 'Y', suffix)
+
+
+def print_report(root, delete=True, prefix='hpss'):
+    '''Perform a query on the HPSS using hsi and print a report on the file
+       sizes. `delete` indicates whether the log file should not be deleted when
+       done. `prefix` gives the prefix for the log file.
+    '''
+    hsi_cmd = ['hsi',
+               '-q',
+               'ls',
+               '-Rla',
+               '%s' % root]
+    tmpfile = tempfile.NamedTemporaryFile(prefix=prefix + '-', delete=False)
+    process = subprocess.Popen(hsi_cmd, stdout=tmpfile, stderr=subprocess.STDOUT)
+    process.wait()
+
+    tmpfile_name = tmpfile.name
+
+    if not delete:
+        print('log file: %s' % tmpfile_name)
+
+    tmpfile.close()
+
+    print_report_from_log(tmpfile_name)
+
+    if delete:
+        os.remove(tmpfile_name)
+
+
+def print_report_from_log(log_filename):
+    '''Print the report given a log file.
+    '''
+    files = parse_log(log_filename)
+    if len(files) == 0:
+        print('no files to report')
+        return
+
+    sizes = np.array([f['size'] for f in files])
+    n_files = len(files)
+    total_size = sizes.sum()
+
+    hist, bins = np.histogram(sizes, BINS)
+    indices = np.digitize(sizes, BINS)
+
+    header_names = ('size range', 'n files', '% files', 'total', '% total')
+    header_sizes = (15, 8, 7, 10, 7)
+
+    header_fmt = ' '.join('%%%ds' % s for s in header_sizes)
+    underlines = tuple('-' * s for s in header_sizes)
+    print(header_fmt % header_names)
+    print(header_fmt % underlines)
+
+    for i, h in enumerate(hist):
+        ind, = np.where(indices == i + 1)
+        bin_size = sizes[ind].sum()
+        print('%6s - %6s %8d %6.1f%% %10s %6.1f%%' % (sizeof_fmt(bins[i]), sizeof_fmt(bins[i+1]), h, 100.0 * h / n_files, sizeof_fmt(bin_size), 100.0 * bin_size / total_size))
+
+
+def parse_log(log_filename):
+    '''Parse a log file, returning a list of dicts with fields 'name' (full
+       path), 'size' (in bytes), and 'owner'.
+    '''
+    files = []
+    with open(log_filename, 'r') as f:
+        f.seek(0)
+        next_is_dir = False
+        current_dir = ''
+        for line in f:
+            if line.strip() == '':
+                next_is_dir = True
+                continue
+            if next_is_dir:
+                current_dir = line[0:-1]
+                next_is_dir = False
+                continue
+
+            # permissions, links, owner, group, size, month, day, year, filename
+            tokens = line.split()
+
+            files.append({'name': current_dir + '/' + tokens[-1],
+                          'size': int(tokens[4]),
+                          'owner': tokens[2]})
+
+    return(files)
+
+
+if __name__ == '__main__':
+    name = 'HPSS file size utility'
+    parser = argparse.ArgumentParser(description=name)
+    parser.add_argument('root', type=str, nargs='*', help='HPSS root directory')
+    parser.add_argument('-p', '--prefix', type=str, default='hpss',
+                        help='prefix for log files, default is hpss')
+    parser.add_argument('-f', '--file', action='store_true',
+                        help='set to interpret root as a log file')
+    parser.add_argument('-k', '--keep-log', action='store_true',
+                        help='set to not delete log file')
+    args = parser.parse_args()
+
+    for r in args.root:
+        if args.file:
+            print_report_from_log(r)
+        else:
+            print_report(r, args.keep_log, args.prefix)
