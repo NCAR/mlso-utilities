@@ -158,7 +158,7 @@ def parse_log(log_filename):
         f.seek(0)
         next_is_dir = False
         current_dir = ''
-        for line in f:
+        for i, line in enumerate(f):
             if line.strip() == '':
                 next_is_dir = True
                 continue
@@ -168,15 +168,19 @@ def parse_log(log_filename):
                 next_is_dir = False
                 continue
 
-            # permissions, links, owner, group, size, month, day, year, filename
-            tokens = line.split()
-            permissions = tokens[0]
+            try:
+                # permissions, links, owner, group, size, month, day, year, filename
+                tokens = line.split()
+                permissions = tokens[0]
 
-            # only a file if not 'd'
-            if permissions[0] != 'd':
-                files.append({'name': current_dir + '/' + tokens[-1],
-                              'size': int(tokens[4]),
-                              'owner': tokens[2]})
+                # only a file if not 'd'
+                if permissions[0] != 'd':
+                    files.append({'name': current_dir + '/' + tokens[-1],
+                                  'size': int(tokens[4]),
+                                  'owner': tokens[2]})
+            except:
+                print('Error processing line %d:' % (i + 1,))
+                print(line)
 
     return(files, dirs)
 
