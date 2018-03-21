@@ -3,4 +3,4 @@
 PREFIX=$(HOME)
 
 install:
-	cp scripts/*.sh $(PREFIX)
+	cd bin; make install PREFIX=$(PREFIX)
