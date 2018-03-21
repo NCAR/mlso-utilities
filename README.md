@@ -2,11 +2,11 @@
 
 #### find_noncordyn_files.sh
 
-Script for finding files in a directory hierarchy that are not in the cordyn group or don't have the given (optional) permissions.
+Script for finding files in a directory hierarchy that are not in the `cordyn` group or don't have the given (optional) permissions.
 
     syntax: ./find_noncordyn_files.sh rootdir [r][w][x]
 
-For example, to find files that are not cordyn group in /hao/acos/sw/sbin or are cordyn group, but aren't group readable, do:
+For example, to find files that are not `cordyn` group in `/hao/acos/sw/sbin` or are `cordyn` group, but aren't group readable, do:
 
     $ VERBOSE=1 ./find_noncordyn_files.sh /hao/acos/sw/sbin r
     /hao/acos/sw/sbin/GetTicket
@@ -20,8 +20,8 @@ For example, to find files that are not cordyn group in /hao/acos/sw/sbin or are
 
 Script for changing, in a directory hierarchy:
 
-  1. all files to cordyn group with group read/write permissions
-  2. all directories to cordyn group with executable permissions
+  1. all files to `cordyn` group with group read/write permissions
+  2. all directories to `cordyn` group with executable permissions
 
     syntax: ./fix_noncordyn_files.sh rootdir
 
@@ -64,7 +64,7 @@ For example, common usage would be to restart the process for an instrument:
 
 #### hpss_get.sh
 
-Script to generate an hsi input file for downloading a directory hierarchy in tape order.
+Script to generate an `hsi` input file that will download a directory hierarchy in tape order.
 
     usage: hpss_get.sh hpss_dir [output_file]
 
@@ -75,7 +75,7 @@ Script to generate an hsi input file for downloading a directory hierarchy in ta
 
 #### watch_hpss
 
-Script to watch a directory for new files to send to the HPSS. This routine should be started and stopped from `hpss_gateway.sh`.
+Script to watch a directory for new files to send to the HPSS. This routine should generally be started and stopped by `hpss_gateway.sh`.
 
     usage: watch_hpss [-h] instrument
 
