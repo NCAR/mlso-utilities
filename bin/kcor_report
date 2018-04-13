@@ -1,0 +1,61 @@
+#!/usr/bin/env python
+
+import argparse
+import calendar
+import os
+
+from jinja2 import Template
+
+
+RAW_DIR = '/hao/mlsodata1/Data/KCor/raw'
+
+TEMPLATE = '''<html>
+  <head>
+    <title>KCor data for {{ "%04d"|format(year) }} - {{ "%02d"|format(month) }}</title>
+    <style>
+      body {font-family: Helvetica;}
+      h1 {font-size: 18pt; font-weight: bold}
+      h4 {font-size: 12pt; font-weight: bold}
+    </style>
+  </head>
+  <body>
+    <h1>KCor data for {{ "%04d"|format(year) }} - {{ "%02d"|format(month) }}</h1>
+    {% for d in days %}
+    <div>
+      <h4>{{ d }}</h4>
+      <img src="{{ raw_dir }}/{{ d }}/q/{{ d }}.kcor.quality.png"/>
+    </div>
+    {% endfor %}
+  </body>
+</html>
+'''
+
+def output(year, month, output_filename):
+    start_day, n_days = calendar.monthrange(year, month)
+
+    days = []
+    for d in range(n_days):
+        date = '%04d%02d%02d' % (year, month, d + 1)
+        plot_file = '%s/%s/q/%s.kcor.quality.png' % (RAW_DIR, date, date)
+        if os.path.exists(plot_file):
+            days.append(date)
+
+    t = Template(TEMPLATE)
+    with open(output_filename, 'w') as f:
+        f.write(t.render(year=year, month=month, days=days, raw_dir=RAW_DIR))
+
+
+def main():
+    name = 'KCor monthly report'
+    parser = argparse.ArgumentParser(description=name)
+    parser.add_argument('year', type=int, help='year')
+    parser.add_argument('month', type=int, help='month')
+    args = parser.parse_args()
+
+    output_filename = '%04d%02d.kcor.report.html' % (args.year, args.month)
+
+    output(args.year, args.month, output_filename)
+
+
+if __name__ == '__main__':
+    main()
