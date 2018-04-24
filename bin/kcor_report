@@ -50,9 +50,12 @@ def main():
     parser = argparse.ArgumentParser(description=name)
     parser.add_argument('year', type=int, help='year')
     parser.add_argument('month', type=int, help='month')
+    parser.add_argument('-d', '--directory', type=str, help='directory to place report')
     args = parser.parse_args()
 
     output_filename = '%04d%02d.kcor.report.html' % (args.year, args.month)
+    if args.directory is not None:
+        output_filename = os.path.join(args.directory, output_filename)
 
     output(args.year, args.month, output_filename)
 
