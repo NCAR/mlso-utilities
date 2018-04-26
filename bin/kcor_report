@@ -11,11 +11,12 @@ RAW_DIR = '/hao/mlsodata1/Data/KCor/raw'
 
 TEMPLATE = '''<html>
   <head>
-    <title>KCor data for {{ "%04d"|format(year) }} - {{ "%02d"|format(month) }}</title>
+    <title>Raw KCor data for {{ "%04d"|format(year) }} - {{ "%02d"|format(month) }}</title>
     <style>
       body {font-family: Helvetica;}
       h1 {font-size: 18pt; font-weight: bold}
       h4 {font-size: 12pt; font-weight: bold}
+      div {display: inline-block;}
     </style>
   </head>
   <body>
