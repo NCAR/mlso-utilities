@@ -7,5 +7,5 @@ for f in ${FILES}; do
   s=$(gunzip -l $f)  
   read -ra arr -d '' <<< "$s"
   file=$(basename $f .gz)
-  echo "$file ${s[5]}"
+  echo "$file ${arr[5]}"
 done
