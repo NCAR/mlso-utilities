@@ -2,7 +2,7 @@
 
 export PATH=/opt/local/hpss/bin:$PATH
 
-ROOT=/CORDYN
+ROOT=$1
 
 PYTHON=/home/mgalloy/anaconda3/bin/python
 HPSS=/home/mgalloy/projects/mlso-utilities/bin/hpss
