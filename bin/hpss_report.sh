@@ -7,8 +7,8 @@ ROOT=$1
 PYTHON=/home/mgalloy/anaconda3/bin/python
 HPSS=/home/mgalloy/projects/mlso-utilities/bin/hpss
 
-TO_EMAIL=mgalloy@ucar.edu
-FROM_EMAIL=mgalloy@ucar.edu
+TO_EMAIL=mgalloy@ucar.edu,iguana@ucar.edu
+FROM_EMAIL=$(whoami)@ucar.edu
 
 HEADER="<html><body><pre>"
 
