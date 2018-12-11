@@ -5,7 +5,7 @@ if [ $# -lt 2 ]; then
   exit 1
 fi
 
-TO=mgalloy@ucar.edu,iguana@ucar.edu
+TO=mgalloy@ucar.edu
 
 YEAR=$1
 MONTH=$2
@@ -40,7 +40,8 @@ fi
 
 echo -e "Sent from $(readlink -f $0) ($(whoami)@$(hostname))" >> $TMPFILE
 
-SUBJECT="Checking observer logs for ${YEAR}/${MONTH} (${STATUS_MSG})"
+MONTH_NAME=$(date -d ${YEAR}${MONTH}01 +"%b")
+SUBJECT="Checking observer logs for ${MONTH_NAME} ${YEAR} (${STATUS_MSG})"
 mail -s "${SUBJECT}" -r $(whoami)@ucar.edu ${TO} < $TMPFILE
 
 rm $TMPFILE
