@@ -15,7 +15,8 @@ OLOG_DIR=$OLOG_BASEDIR/$YEAR
 
 DATE=${YEAR}${MONTH}01
 
-TMPFILE=$(mktemp /tmp/$0.XXXXXX)
+BASENAME=$(basename $0)
+TMPFILE=$(mktemp /tmp/$BASENAME.XXXXXX)
 
 echo -e "checking ${YEAR}/${MONTH} on ${OLOG_DIR}...\n" > $TMPFILE
 
