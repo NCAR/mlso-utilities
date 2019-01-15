@@ -6,7 +6,7 @@ if [ $# -lt 2 ]; then
   echo
   echo "positional arguments:"
   echo "  action      action to perform: start, stop, or restart"
-  echo "  instrument  instrument to watch for: KCor or CoMP"
+  echo "  instrument  instrument to watch for, e.g., KCor, CoMP, UCoMP, etc."
   exit 1
 fi
 
