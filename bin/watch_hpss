@@ -237,7 +237,7 @@ def main():
     desc = 'Watch for files to send to HPSS'
     parser = argparse.ArgumentParser(description=desc)
     parser.add_argument('instrument', type=str, nargs=1,
-                        help='instrument to watch for: KCor or CoMP')
+                        help='instrument to watch for, e.g., KCor, CoMP, UCoMP, etc.')
     args = parser.parse_args()
 
     instrument = args.instrument[0]
