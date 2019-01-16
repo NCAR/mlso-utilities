@@ -18,10 +18,10 @@ QUEUE_ROOT = '/hao/mlsodata3/Data/HPSS-Queue'
 #QUEUE_ROOT = '/home/mgalloy/hpss-queue'
 
 HPSS_ROOT  = '/CORDYN'
-#HPSS_ROOT  = '/home/mgalloy'
 #HPSS_ROOT  = '/home/mgalloy/hpss-root'
 
 HSI_ROOT   = '/opt/local/hpss'
+
 
 # logging
 
