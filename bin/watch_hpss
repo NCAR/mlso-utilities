@@ -29,7 +29,7 @@ DATE_FMT = '%Y-%d-%m %H:%M:%S'
 
 # time between polling, in seconds
 #POLL_DELAY = 60.0 * 5
-POLL_DELAY = 15.0
+POLL_DELAY = 60.0
 
 # nicer names for signal constants
 signal_names = collections.defaultdict(str, {signal.SIGINT:  'SIGINT',
@@ -102,7 +102,7 @@ class DirectoryLock:
         else:
             self.have_lock = True
             open(self.lock_file, 'w').close()
-            logging.info('locked %s' % self.dir)
+            logging.debug('locked %s' % self.dir)
 
     def __exit__(self, exc_type, exc_value, traceback):
         '''Unlock the directory if we already have the lock.
@@ -110,7 +110,7 @@ class DirectoryLock:
         if self.have_lock:
             os.remove(self.lock_file)
             self.have_lock = False
-            logging.info('released lock on %s' % self.dir)
+            logging.debug('released lock on %s' % self.dir)
 
 
 class Local:
@@ -123,12 +123,12 @@ class Local:
 
     def __enter__(self):
         '''Open connection to local system'''
-        logging.info('opened connection to local system')
+        logging.debug('opened connection to local system')
         return self
 
     def __exit__(self, exc_type, exc_value, traceback):
         '''Close connection to local system'''
-        logging.info('closed connection to local system')
+        logging.debug('closed connection to local system')
 
     def put(self, src, dst):
         '''Send src to dst. Do not overwrite dst.
