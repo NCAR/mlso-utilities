@@ -14,16 +14,16 @@ import time
 
 # locations
 
-#QUEUE_ROOT = '/hao/mlsodata3/Data/HPSS-Queue'
-QUEUE_ROOT = '/home/mgalloy/hpss-queue'
-#HPSS_ROOT  = '/CORDYN'
+QUEUE_ROOT = '/hao/mlsodata3/Data/HPSS-Queue'
+#QUEUE_ROOT = '/home/mgalloy/hpss-queue'
+HPSS_ROOT  = '/CORDYN'
 #HPSS_ROOT  = '/home/mgalloy'
-HPSS_ROOT  = '/home/mgalloy/hpss-root'
+#HPSS_ROOT  = '/home/mgalloy/hpss-root'
 HSI_ROOT   = '/opt/local/hpss'
 
 # logging
 
-LOG_ROOT = '/home/mgalloy/hpss-logs'
+LOG_ROOT = '/hao/acos/ucomp/logs'
 LOG_FMT  = '%(asctime)s %(levelname)s: %(module)s: %(message)s'
 DATE_FMT = '%Y-%d-%m %H:%M:%S'
 
@@ -219,8 +219,9 @@ def move_file(src_filename, dst_root, file_system):
 
     basename = os.path.basename(src_filename)
     local_size = os.path.getsize(src_filename)
+    year = basename[0:4]
 
-    dst_filename = os.path.join(dst_root, basename)
+    dst_filename = os.path.join(dst_root, year, basename)
 
     file_system.put(src_filename, dst_filename)
     hpss_size = file_system.file_size(dst_filename)
@@ -243,9 +244,8 @@ def main():
     instrument = args.instrument[0]
 
     today = datetime.date.today()
-    year = today.strftime('%Y')
 
-    log_basename = '%s.hpss.%s.log' % (today.strftime('%Y%m%d'), instrument.lower())
+    log_basename = '%s.%s.hpss.log' % (today.strftime('%Y%m%d'), instrument.lower())
     log_filename = os.path.join(LOG_ROOT, log_basename)
 
     logging.basicConfig(filename=log_filename,
@@ -256,7 +256,7 @@ def main():
 
     with Local() as file_system:
         src_root = os.path.join(QUEUE_ROOT, instrument)
-        dst_root = os.path.join(HPSS_ROOT, instrument.upper(), year)
+        dst_root = os.path.join(HPSS_ROOT, instrument.upper())
         with SignalWatcher() as signal_watcher:
             while True:
                 with DirectoryLock(src_root) as lock:
