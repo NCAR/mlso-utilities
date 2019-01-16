@@ -16,9 +16,11 @@ import time
 
 QUEUE_ROOT = '/hao/mlsodata3/Data/HPSS-Queue'
 #QUEUE_ROOT = '/home/mgalloy/hpss-queue'
+
 HPSS_ROOT  = '/CORDYN'
 #HPSS_ROOT  = '/home/mgalloy'
 #HPSS_ROOT  = '/home/mgalloy/hpss-root'
+
 HSI_ROOT   = '/opt/local/hpss'
 
 # logging
@@ -27,9 +29,10 @@ LOG_ROOT = '/hao/acos/ucomp/logs'
 LOG_FMT  = '%(asctime)s %(levelname)s: %(module)s: %(message)s'
 DATE_FMT = '%Y-%d-%m %H:%M:%S'
 
-# time between polling, in seconds
-#POLL_DELAY = 60.0 * 5
-POLL_DELAY = 60.0
+# time between polling (seconds)
+POLL_DELAY = 1.0
+# how frequently to check for data, i.e., check every 12 polls for new data
+POLLS_PER_DATA_CHECK = 60
 
 # nicer names for signal constants
 signal_names = collections.defaultdict(str, {signal.SIGINT:  'SIGINT',
@@ -123,12 +126,12 @@ class Local:
 
     def __enter__(self):
         '''Open connection to local system'''
-        logging.debug('opened connection to local system')
+        logging.info('opened connection to local system')
         return self
 
     def __exit__(self, exc_type, exc_value, traceback):
         '''Close connection to local system'''
-        logging.debug('closed connection to local system')
+        logging.info('closed connection to local system')
 
     def put(self, src, dst):
         '''Send src to dst. Do not overwrite dst.
@@ -143,7 +146,7 @@ class Local:
 
         if process.returncode != 0:
             logging.error('problem with cmd: "%s"' % ' '.join(cmd))
-            logging.error(output)
+            logging.error(output.decode('utf-8'))
             raise IOError('problem putting %s -> %s' % (src, dst))
 
     def file_size(self, filename):
@@ -229,7 +232,7 @@ def move_file(src_filename, dst_root, file_system):
     if local_size != hpss_size:
         raise IOError('size on HPSS (%d) != local size (%d)' % (hpss_size, local_size))
 
-    logging.debug('removing %s from queue dir' % basename)
+    logging.info('removing %s from queue dir' % basename)
     os.remove(src_filename)
 
 
@@ -254,22 +257,30 @@ def main():
 
     logging.info('starting %s\n%s' % (name, sys.version))
 
-    with Local() as file_system:
+    with HPSS() as file_system:
         src_root = os.path.join(QUEUE_ROOT, instrument)
         dst_root = os.path.join(HPSS_ROOT, instrument.upper())
         with SignalWatcher() as signal_watcher:
+            i = 0
             while True:
-                with DirectoryLock(src_root) as lock:
-                    logging.info('checking %s' % src_root)
+                if signal_watcher.is_terminated:
+                    break
+                else:
+                    i += 1
+                    if i % POLLS_PER_DATA_CHECK == 0:
+                        i = 0
 
-                    for src_filename in glob.glob(os.path.join(src_root, '*')):
-                        try:
-                            move_file(src_filename, dst_root, file_system)
-                        except IOError as e:
-                            logging.warning(e)
-                            break
+                        with DirectoryLock(src_root) as lock:
+                            logging.info('checking %s' % src_root)
 
-                        if signal_watcher.is_terminated: break
+                            for src_filename in glob.glob(os.path.join(src_root, '*')):
+                                try:
+                                    move_file(src_filename, dst_root, file_system)
+                                except IOError as e:
+                                    logging.warning(e)
+                                    break
+
+                                if signal_watcher.is_terminated: break
 
                     if signal_watcher.is_terminated:
                         break
