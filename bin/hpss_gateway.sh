@@ -1,5 +1,7 @@
 #!/bin/sh
 
+PYTHON=/home/mgalloy/anaconda3/bin/python
+
 # need both action and instrument arguments to work
 if [ $# -lt 2 ]; then
   echo "usage: $(basename $0) action instrument"
@@ -24,7 +26,7 @@ kill_instrument () {
 }
 
 start_instrument () {
-  $BIN_DIR/watch_hpss $1
+  $PYTHON $BIN_DIR/watch_hpss $1
 }
 
 case "$ACTION" in
