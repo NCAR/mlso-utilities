@@ -1,14 +1,18 @@
 #!/bin/sh
 
-if [ $# -lt 2 ]; then
-  echo "usage: $0 YEAR MONTH"
-  exit 1
-fi
-
 TO=mgalloy@ucar.edu
 
-YEAR=$1
-MONTH=$2
+if [ $# -lt 2 ]; then
+  MONTH=$(date -d "-1 day" +"%m")
+else
+  MONTH=$2
+fi
+
+if [ $# -lt 1 ]; then
+  YEAR=$(date -d "-1 day" +"%Y")
+else
+  YEAR=$1
+fi
 
 OLOG_BASEDIR=/hao/ftpd5/mlso/log/observer
 OLOG_DIR=$OLOG_BASEDIR/$YEAR
