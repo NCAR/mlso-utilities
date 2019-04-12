@@ -17,7 +17,7 @@ STATUS=0
 DIRS="cme_movies engineering hpr hpr_diff logs"
 
 for d in $DIRS; do
-  cmd="rsync $RSYNC_OPTIONS $REMOTE_SERVER:$REMOTE_ROOT_DIR/$d $LOCAL_ROOT_DIR/$d"
+  cmd="rsync $RSYNC_OPTIONS $REMOTE_SERVER:$REMOTE_ROOT_DIR/$d $LOCAL_ROOT_DIR"
   echo "$cmd" >> $LOG
   $cmd >> $LOG
 
