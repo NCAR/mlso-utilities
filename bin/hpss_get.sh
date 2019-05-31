@@ -31,6 +31,12 @@ hsi -P ls -PR ${HPSS_DIR} > ${WORKING_DIR}/hsi_output
 echo "Extracting tape information..."
 cat ${WORKING_DIR}/hsi_output | awk 'BEGIN {FS="[\t ]+"}; {if($1=="FILE") print $6,"\t",$2}' > ${WORKING_DIR}/tokenized
 
+echo "Making local directories..."
+cat ${WORKING_DIR}/hsi_output | awk 'BEGIN {FS="[\t ]+"}; {if($1=="FILE") print $2}' > ${WORKING_DIR}/files
+while read f; do echo $(dirname "$f") >> ${WORKING_DIR}/dirs; done < ${WORKING_DIR}/files
+sort ${WORKING_DIR}/dirs | uniq > ${WORKING_DIR}/uniq_dirs
+while read f ; do mkdir -p $LOCAL_ROOT/$f; done < ${WORKING_DIR}/uniq_dirs
+
 echo "Sorting..."
 cat ${WORKING_DIR}/tokenized | sort > ${WORKING_DIR}/sorted
 
