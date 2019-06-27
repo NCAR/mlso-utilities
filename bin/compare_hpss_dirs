@@ -1,0 +1,134 @@
+#!/usr/bin/env python
+
+import argparse
+import os
+
+
+def path2name(path):
+    """Convert a path to a name suitable for using in a filename, such
+    converting as /FS/UC to -FS-UC.
+    """
+    return path.replace("/", "-")
+
+
+def abs2rel(path, root_path):
+    if path.startswith(root_path):
+        rel_path = path[len(root_path):]
+        if rel_path == "": rel_path = "/"
+        return rel_path
+    else:
+        raise IndexError
+
+
+def add_to_missing(dirname, missing):
+    # remove elements of missing that are children of dirname
+    new_missing = {m for m in missing if not m.startswith(dirname)}
+
+    # add dirname if no element of missing is a parent of dirname
+    if not {m for m in new_missing if dirname.startswith(m)}:
+        new_missing.add(dirname)
+
+    return new_missing
+
+
+def compare_listings_subset(listing1, listing2, name1, name2):
+    missing_in_listing2 = set()
+
+    for dirname in listing1:
+        if dirname not in listing2:
+            missing_in_listing2 = add_to_missing(dirname, missing_in_listing2)
+        else:
+            files1 = listing1[dirname]
+            files2 = listing2[dirname]
+            missing_files = {filename for filename in files1 if filename not in files2}
+            dname = "" if dirname == "/" else dirname
+            for mfile in missing_files:
+                missing_in_listing2 = add_to_missing(f"{dname}/{mfile}",
+                                                     missing_in_listing2)
+
+    return missing_in_listing2
+
+
+def compare_listings(listing1, listing2, name1, name2):
+    missing_in_listing2 = compare_listings_subset(listing1, listing2, name1, name2)
+    missing_in_listing1 = compare_listings_subset(listing2, listing1, name2, name1)
+
+    print(f"Missing in {name1}:")
+    for m in missing_in_listing1:
+        print(f"  {m}")
+
+    print(f"Missing in {name2}:")
+    for m in missing_in_listing2:
+        print(f"  {m}")
+
+
+def retrieve_listing(dirname):
+    """Retrieve a file listing from the HPSS using hsi.
+    """
+    pass
+
+
+
+def get_name_size(line):
+    """Return the name and size in bytes from a line in a directory listing.
+    """
+    tokens = line.split()
+    return tokens[-1], tokens[4]
+
+
+def parse_listing(lines, root_dirname):
+    listing = {}
+    current_dirname = ""
+
+    for line in lines:
+        if line.isspace():
+            continue
+        elif line.startswith("/"):
+            dirname = line.strip()[0:-1]   # remove : at the end of the line
+            current_dirname = abs2rel(dirname, root_dirname)
+            listing[current_dirname] = {}
+        else:
+            name, size = get_name_size(line)
+            listing[current_dirname][name] = int(size)
+
+    return listing
+
+def read_listing(filename, root_dirname):
+    """Return a hash of directories from a file listing of an HPSS directory
+    name.
+    """
+    with open(filename, "r") as f:
+        lines = f.readlines()
+
+    listing = parse_listing(lines, root_dirname)
+    return listing
+
+
+def get_listing(dirname):
+    """Return a hash of directories from an HPSS directory name.
+    """
+    filename = f"hpss{path2name(dirname)}.log"
+    if not os.path.exists(filename):
+        retrieve_listing(dirname)
+    return read_listing(filename, dirname)
+
+
+def main():
+    """Handle user arguments and top-level logic.
+    """
+    desc = "Compare HPSS directory hierarchies"
+    parser = argparse.ArgumentParser(description=desc)
+    parser.add_argument("dirs", type=str, nargs=2, help="dirs to check")
+    args = parser.parse_args()
+
+    dirname1 = args.dirs[0]
+    dirname2 = args.dirs[1]
+
+    listing1 = get_listing(dirname1)
+    listing2 = get_listing(dirname2)
+
+    compare_listings(listing1, listing2, dirname1, dirname2)
+
+
+if __name__ == "__main__":
+    main()
