@@ -33,6 +33,7 @@ def add_to_missing(dirname, missing):
 
 def compare_listings_subset(listing1, listing2, name1, name2):
     missing_in_listing2 = set()
+    wrong_size_in_listing2 = set()
 
     for dirname in listing1:
         if dirname not in listing2:
@@ -41,24 +42,46 @@ def compare_listings_subset(listing1, listing2, name1, name2):
             files1 = listing1[dirname]
             files2 = listing2[dirname]
             missing_files = {filename for filename in files1 if filename not in files2}
+
             dname = "" if dirname == "/" else dirname
             for mfile in missing_files:
                 missing_in_listing2 = add_to_missing(f"{dname}/{mfile}",
                                                      missing_in_listing2)
 
-    return missing_in_listing2
+            present_files = {filename for filename in files1 if filename in files2}
+            for pfile in present_files:
+                size1 = files1[pfile]
+                size2 = files2[pfile]
+                if size1 != size2:
+                    wrong_size_in_listing2.add(f"{dname}/{pfile} ({size1} != {size2})")
+
+    return missing_in_listing2, wrong_size_in_listing2
 
 
 def compare_listings(listing1, listing2, name1, name2):
-    missing_in_listing2 = compare_listings_subset(listing1, listing2, name1, name2)
-    missing_in_listing1 = compare_listings_subset(listing2, listing1, name2, name1)
+    missing_in_listing2, wrong_size_in_listing2 = compare_listings_subset(listing1, 
+                                                                          listing2, 
+                                                                          name1, 
+                                                                          name2)
+    missing_in_listing1, wrong_size_in_listing1 = compare_listings_subset(listing2,
+                                                                          listing1,
+                                                                          name2,
+                                                                          name1)
 
     print(f"Missing in {name1}:")
     for m in missing_in_listing1:
         print(f"  {m}")
 
+    print(f"Wrong size in {name1}:")
+    for m in wrong_size_in_listing1:
+        print(f"  {m}")
+
     print(f"Missing in {name2}:")
     for m in missing_in_listing2:
+        print(f"  {m}")
+
+    print(f"Wrong size in {name2}:")
+    for m in wrong_size_in_listing2:
         print(f"  {m}")
 
 
