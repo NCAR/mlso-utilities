@@ -1,0 +1,338 @@
+#!/usr/bin/env python
+
+import argparse
+import collections
+import configparser
+import datetime
+import glob
+import logging
+import os
+import signal
+import subprocess
+import sys
+import time
+
+
+# logging options
+LOG_FMT  = "%(asctime)s %(levelname)s: %(module)s: %(message)s"
+DATE_FMT = "%Y-%d-%m %H:%M:%S"
+
+# time between polling (seconds)
+POLL_DELAY = 1.0
+
+# how frequently to check for data, i.e., check every 12 polls for new data
+POLLS_PER_DATA_CHECK = 60
+
+# nicer names for signal constants
+signal_names = collections.defaultdict(str, {signal.SIGINT:  "SIGINT",
+                                             signal.SIGTERM: "SIGTERM"})
+
+
+class SignalWatcher:
+    """Register for signals to allow user to exit at appropriate times.
+
+    Typical usage would be to enter a SignalWatcher as a context manager and
+    check it at convenient times to determine if the application should stop::
+
+        with SignalWatcher() as watcher:
+            while True:
+                # do stuff
+                if watcher.is_terminated:
+                    break
+    """
+
+    def __init__(self, signals=None):
+        if signals is None:
+            signals = [signal.SIGHUP, signal.SIGINT, signal.SIGTERM]
+        self.signals = signals
+        self.is_terminated = False
+        self.signum = 0
+
+    def __enter__(self):
+        self.original_handlers = {s: signal.getsignal(s) for s in self.signals}
+        for s in self.signals:
+            signal.signal(s, self.handle_signal)
+        return(self)
+
+    def __exit__(self, exc_type, exc_value, traceback):
+        for s in self.signals:
+            signal.signal(s, self.original_handlers[s])
+
+    def handle_signal(self, signum, frame):
+        self.is_terminated = True
+        self.signum = signum
+
+
+class LocalDirectoryLock:
+    """Represents a lock on a local directory with a lock file, by default .lock
+    in the given directory.
+
+    Typical usage would be to use as a context manager to do operations in a
+    given directory that shouldn't be done by another process using the same
+    lock file::
+
+        with LocalDirectoryLock(dir):
+            # do stuff in dir
+    """
+
+    def __init__(self, dir, lock_name=".lock"):
+        self.dir = dir
+        self.have_lock = False
+        self.lock_name = lock_name
+
+    @property
+    def lock_file(self):
+        return(os.path.join(self.dir, self.lock_name))
+
+    def __enter__(self):
+        """Lock the directory unless already locked.
+        """
+        if os.path.exists(self.lock_file):
+            self.have_lock = False
+        else:
+            self.have_lock = True
+            open(self.lock_file, "w").close()
+            logging.debug(f"locked {self.dir}")
+
+    def __exit__(self, exc_type, exc_value, traceback):
+        """Unlock the directory if we already have the lock.
+        """
+        if self.have_lock:
+            os.remove(self.lock_file)
+            self.have_lock = False
+            logging.debug(f"released lock on {self.dir}")
+
+
+class LocalFileSystem:
+    """Represents a local file system using the same API as HPSS and Globus.
+    """
+
+    def __init__(self, config):
+        self.name = "Local file system"
+        self.tag = "local"
+        self.root = config.get("Local", "root_dir")
+        self.bin_dir = config.get("Local", "bin_dir")
+
+    def transform_dirname(self, d):
+        return d
+
+    def __enter__(self):
+        """Open connection to local file system"""
+        logging.info("opened connection to local file system")
+        return self
+
+    def __exit__(self, exc_type, exc_value, traceback):
+        """Close connection to local file system"""
+        logging.info("closed connection to local file system")
+
+    def put(self, src, dst):
+        """Send src to dst. Do not overwrite dst.
+        """
+        logging.info(f"putting {src} -> {dst}")
+        cmd = [f"{self.bin_dir}/cp", "--no-clobber", src, dst]
+        process = subprocess.Popen(cmd,
+                                   stdout=subprocess.PIPE,
+                                   stderr=subprocess.STDOUT)
+        output, _ = process.communicate()
+        process.wait()
+
+        if process.returncode != 0:
+            cmd_string = " ".join(cmd)
+            logging.error(f"problem with cmd: \"{cmd_string}\"")
+            logging.error(output.decode("utf-8"))
+            raise IOError(f"problem putting {src} -> {dst}")
+
+    def file_size(self, filename):
+        """Return file size of given filename in bytes."""
+        cmd = [f"{self.bin_dir}/ls", "-l", filename]
+        process = subprocess.Popen(cmd,
+                                   stdout=subprocess.PIPE,
+                                   stderr=subprocess.STDOUT)
+        output, _ = process.communicate()
+        process.wait()
+
+        if process.returncode != 0:
+            cmd_string = " ".join(cmd)
+            logging.error(f"problem with cmd: \"{cmd_string}\"")
+            logging.error(output)
+            raise IOError(f"problem finding size of {filename}")
+
+        return(int(output.split()[4]))
+
+
+class HPSS:
+    """Represents the HPSS and the actions that can be performed on it.
+    """
+
+    def __init__(self, config):
+        self.name = "HPSS"
+        self.tag = self.name.lower()
+        self.hsi_root = config.get("HPSS", "bin_dir")
+        self.root = config.get("HPSS", "root_dir")
+
+    def transform_dirname(self, d):
+        return d.upper()
+
+    def __enter__(self):
+        """Open connection to HPSS"""
+        logging.info("opened connection to HPSS")
+        return self
+
+    def __exit__(self, exc_type, exc_value, traceback):
+        """Close connection to HPSS"""
+        logging.info("closed connection to HPSS")
+
+    def put(self, src, dst):
+        """Send src to dst. Do not overwrite dst.
+        """
+        logging.info(f"putting {src} -> {dst}")
+        hsi_cmd = [f"{self.hsi_root}/bin/hsi", "-q", "-P", "cput", src, ":", dst]
+        process = subprocess.Popen(hsi_cmd,
+                                   stdout=subprocess.PIPE,
+                                   stderr=subprocess.STDOUT)
+        output, _ = process.communicate()
+        process.wait()
+
+        if process.returncode != 0:
+            hsi_cmd_string = " ".join(hsi_cmd)
+            logging.error(f"problem with cmd: \"{hsi_cmd_string}\"")
+            logging.error(output)
+            raise IOError(f"problem putting {src} -> {dst}")
+
+    def file_size(self, filename):
+        """Return file size of given filename in bytes."""
+        hsi_cmd = [f"{self.hsi_root}/bin/hsi", "-q", "-P", "ls", "-P", filename]
+        process = subprocess.Popen(hsi_cmd,
+                                   stdout=subprocess.PIPE,
+                                   stderr=subprocess.STDOUT)
+        output, _ = process.communicate()
+        process.wait()
+
+        if process.returncode != 0:
+            hsi_cmd_string = " ".join(hsi_cmd)
+            logging.error(f"problem with cmd: \"{hsi_cmd_string}\"")
+            logging.error(output)
+            raise IOError(f"problem finding size of {filename}")
+
+        return(int(output.split()[2]))
+
+
+class Globus:
+    """Represents Globus and the actions that can be performed on it.
+    """
+    def __init__(self, config):
+        pass
+
+    def transform_dirname(self, d):
+        return d
+
+
+def move_file(src_filename, dst_root, file_system):
+    """Send source file to destination root with the same basename using the
+    given file system. Delete source file when confirmed done.
+    """
+
+    basename = os.path.basename(src_filename)
+    local_size = os.path.getsize(src_filename)
+    year = basename[0:4]
+
+    dst_filename = os.path.join(dst_root, year, basename)
+
+    file_system.put(src_filename, dst_filename)
+    archive_size = file_system.file_size(dst_filename)
+
+    if local_size != archive_size:
+        fsname = file_system.name
+        raise IOError(f"size on {fsname} ({archive_size}) != local size ({local_size})")
+
+    logging.info(f"removing {basename} from queue dir")
+    os.remove(src_filename)
+
+
+def log_started(filename):
+    try:
+        return os.path.getsize(filename) > 0
+    except FileNotFoundError:
+        return False
+
+
+def main():
+    desc = "MLSO archiver daemon"
+    parser = argparse.ArgumentParser(description=desc)
+    parser.add_argument("instrument", type=str,
+                        help="instrument to watch for, e.g., KCor, CoMP, UCoMP, etc.")
+    parser.add_argument("-m", "--method", default="local",
+                        help="archival method: hpss, globus, or local")
+    parser.add_argument("-c", "--config-filename", default=None,
+                        help="config filename")
+    args = parser.parse_args()
+
+    today = datetime.date.today()
+    method = args.method.lower()
+
+    if args.config_filename is None:
+        bin_dir = os.path.dirname(os.path.realpath(__file__))
+        config_filename = os.path.join(bin_dir, "mlso-archiver.cfg")
+    else:
+        config_filename = os.path.realpath(args.config_filename)
+
+    config = configparser.ConfigParser()
+    config.read(config_filename)
+
+    log_basename = f"{today.strftime('%Y%m%d')}.{args.instrument.lower()}.{method}.log"
+    log_filename = os.path.join(config.get("logging", "dir"), log_basename)
+
+    logging.basicConfig(filename=log_filename,
+                        format=LOG_FMT, datefmt=DATE_FMT,
+                        level=logging.DEBUG)
+
+    if log_started(log_filename):
+        logging.info("-" * 40)
+
+    logging.info(f"starting {parser.prog}")
+
+    try:
+        archive_fs = {"hpss": HPSS, "local": LocalFileSystem, "globus": Globus}[method]
+    except KeyError:
+        msg = f"unknown archive file system: {method}"
+        logging.error(msg)
+        parser.error(msg)
+
+    with archive_fs(config) as file_system:
+        src_root = os.path.join(config.get("queue", "root_dir"), args.instrument)
+        dst_root = os.path.join(file_system.root,
+                                file_system.transform_dirname(args.instrument))
+        with SignalWatcher() as signal_watcher:
+            i = 0
+            while True:
+                if signal_watcher.is_terminated:
+                    break
+                else:
+                    i += 1
+                    if i % POLLS_PER_DATA_CHECK == 0:
+                        i = 0
+
+                        with LocalDirectoryLock(src_root) as lock:
+                            logging.info(f"checking {src_root}")
+
+                            for src_filename in glob.glob(os.path.join(src_root, "*")):
+                                try:
+                                    move_file(src_filename, dst_root, file_system)
+                                except IOError as e:
+                                    logging.warning(e)
+                                    break
+
+                                if signal_watcher.is_terminated: break
+
+                    if signal_watcher.is_terminated:
+                        break
+                    else:
+                        time.sleep(POLL_DELAY)
+
+            logging.info(f"exited from {signal_names[signal_watcher.signum]}")
+            logging.shutdown()
+
+    logging.info(f"stopping {parser.prog}")
+
+if __name__ == "__main__":
+    main()
