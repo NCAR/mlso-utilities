@@ -22,11 +22,11 @@ INSTRUMENT=$2
 
 
 kill_instrument () {
-  pkill -f "watch_hpss $1"
+  pkill -f "mlso-archiverd $1"
 }
 
 start_instrument () {
-  $PYTHON $BIN_DIR/watch_hpss $1
+  $PYTHON $BIN_DIR/mlso-archiverd --method hpss $1
 }
 
 case "$ACTION" in
