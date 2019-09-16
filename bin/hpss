@@ -32,6 +32,13 @@ def sizeof_fmt(num, suffix='B', fmt='%d'):
     return format % (num, 'Y', suffix)
 
 
+def path2name(path):
+    """Convert a path to a name suitable for using in a filename, such
+    converting as /FS/UC to -FS-UC.
+    """
+    return path.replace("/", "-")
+
+
 def print_report(root, delete=True, prefix='hpss', small_files_max=0):
     '''Perform a query on the HPSS using hsi and print a report on the file
        sizes. `delete` indicates whether the log file should not be deleted when
@@ -42,7 +49,9 @@ def print_report(root, delete=True, prefix='hpss', small_files_max=0):
                'ls',
                '-Rla',
                '%s' % root]
-    tmpfile = tempfile.NamedTemporaryFile(prefix=prefix + '-', delete=False)
+    #tmpfile = tempfile.NamedTemporaryFile(prefix=prefix + '-', delete=False)
+    rootname = path2name(root)
+    tmpfile = f"{prefix}{rootname}.log"
     process = subprocess.Popen(hsi_cmd, stdout=tmpfile, stderr=subprocess.STDOUT)
     process.wait()
 
