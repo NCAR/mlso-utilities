@@ -6,7 +6,7 @@ import locale
 import numpy as np
 import os
 import subprocess
-import tempfile
+
 
 # define some constants to make defining the bins easier
 K = 1024
@@ -49,18 +49,15 @@ def print_report(root, delete=True, prefix='hpss', small_files_max=0):
                'ls',
                '-Rla',
                '%s' % root]
-    #tmpfile = tempfile.NamedTemporaryFile(prefix=prefix + '-', delete=False)
+
     rootname = path2name(root)
-    tmpfile = f"{prefix}{rootname}.log"
-    process = subprocess.Popen(hsi_cmd, stdout=tmpfile, stderr=subprocess.STDOUT)
-    process.wait()
+    tmpfile_name = f"{prefix}{rootname}.log"
+    with open(tmpfile_name, "w") as tmpfile:
+        process = subprocess.Popen(hsi_cmd, stdout=tmpfile, stderr=subprocess.STDOUT)
+        process.wait()
 
-    tmpfile_name = tmpfile.name
-
-    if not delete:
-        print('log file: %s' % tmpfile_name)
-
-    tmpfile.close()
+        if not delete:
+            print('log file: %s' % tmpfile_name)
 
     if process.returncode == 0:
         print_report_from_log(tmpfile_name, small_files_max=0)
@@ -116,10 +113,10 @@ def print_filesizes(files):
     for i, h in enumerate(hist):
         ind, = np.where(indices == i + 1)
         bin_size = sizes[ind].sum()
-        print('%6s - %6s %12s %6.1f%% %10s %6.1f%%' % (sizeof_fmt(bins[i]), sizeof_fmt(bins[i+1]), locale.format('%d', h, grouping=True), 100.0 * h / n_files, sizeof_fmt(bin_size), 100.0 * bin_size / total_size))
+        print('%6s - %6s %12s %6.1f%% %10s %6.1f%%' % (sizeof_fmt(bins[i]), sizeof_fmt(bins[i+1]), locale.format_string('%d', h, grouping=True), 100.0 * h / n_files, sizeof_fmt(bin_size), 100.0 * bin_size / total_size))
 
     print(header_fmt % underlines)
-    print('%15s %12s %6.1f%% %10s %6.1f%%' % ('Total', locale.format('%d', n_files, grouping=True), 100.0, sizeof_fmt(total_size), 100.0))
+    print('%15s %12s %6.1f%% %10s %6.1f%%' % ('Total', locale.format_string('%d', n_files, grouping=True), 100.0, sizeof_fmt(total_size), 100.0))
 
 
 def print_owners(files):
@@ -137,7 +134,7 @@ def print_owners(files):
     print('%12s %12s' % ('-' * 12, '-' * 12))
 
     for o in owners:
-        print('%-12s %12s' % (o, locale.format('%d', owners[o], grouping=True)))
+        print('%-12s %12s' % (o, locale.format_string('%d', owners[o], grouping=True)))
 
 
 def print_smallfiles(files, small_files_max):
