@@ -1,0 +1,69 @@
+#!/usr/bin/env python
+
+import argparse
+import datetime
+
+import matplotlib.pyplot as plt
+import numpy as np
+
+
+def parse_datafile(filename, acquisition_time=1.0, baseline_server=0):
+    data = np.genfromtxt(filename, delimiter=',', skip_header=1, dtype=np.longlong)
+    with open(filename) as f:
+        server_names = [name.rstrip() for name in f.readline().split(', ')]
+
+    start_time = data[0, 0]
+
+    offsets = np.zeros((data.shape[0], data.shape[1]), dtype=data.dtype)
+    for s in range(0, offsets.shape[1]):
+        offsets[:, s] = data[:, s] - s * acquisition_time - data[:, baseline_server]
+
+    return server_names, offsets, start_time
+
+
+def plot_offsets(server_names, offsets, output_filename, start_time,
+                 threshold_time=10.0, baseline_server=0):
+    start_datetime = datetime.datetime.fromtimestamp(start_time)
+
+    fig, ax = plt.subplots(figsize=(10, 5))
+
+    for s, name in enumerate(server_names):
+        ax.plot(offsets[:, s], label=name)
+        if abs(offsets[-1, s]) > threshold_time or s == baseline_server:
+            ax.text(offsets.shape[0], offsets[-1, s], f"{offsets[-1, s]} s [{name}]",
+                    fontsize=8.0,
+                    verticalalignment="center")
+            ax.text(-0.5, offsets[0, s], f"{offsets[0, s]} s",
+                    fontsize=8.0,
+                    horizontalalignment="right",
+                    verticalalignment="center")
+
+    ax.spines["top"].set_visible(False)
+    ax.spines["right"].set_visible(False)
+    ax.get_xaxis().tick_bottom()
+    ax.get_yaxis().tick_left()
+    ax.set_xlabel(f"Hours since {start_datetime}")
+    ax.set_ylabel("Offset [sec]")
+
+    ax.grid(b=True, which="major", color="lightgrey", linestyle=":")
+    ax.set_title(f"Clock offset drift for servers since {start_datetime}")
+
+    fig.savefig(output_filename)
+
+
+def main():
+    parser = argparse.ArgumentParser(description="Plot server date/time offsets")
+    parser.add_argument("filename", type=str, help="CSV file with times")
+    parser.add_argument("-o", "--output", type=str, default="clocks.png",
+                        help="output filename")
+    args = parser.parse_args()
+
+    baseline_server = 0
+    server_names, offsets, start_time = parse_datafile(args.filename,
+                                                       baseline_server=baseline_server)
+    plot_offsets(server_names, offsets, args.output, start_time,
+                 baseline_server=baseline_server)
+
+
+if __name__ == "__main__":
+    main()
