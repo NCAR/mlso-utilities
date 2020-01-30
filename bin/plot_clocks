@@ -60,7 +60,7 @@ def send_plot(output_filename, address):
     now = datetime.datetime.now().date()
     msg = MIMEMultipart()
 
-    msg["Subject"] = f"Clock drift for {now}"
+    msg["Subject"] = f"Clock drift for MLSO servers [{now}]"
     msg["From"] = "mgalloy@ucar.edu"
     msg["To"] = address
 
