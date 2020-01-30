@@ -2,6 +2,11 @@
 
 import argparse
 import datetime
+import os
+import smtplib
+from email.mime.application import MIMEApplication
+from email.mime.multipart import MIMEMultipart
+from email.mime.text import MIMEText
 
 import matplotlib.pyplot as plt
 import numpy as np
@@ -51,11 +56,34 @@ def plot_offsets(server_names, offsets, output_filename, start_time,
     fig.savefig(output_filename)
 
 
+def send_plot(output_filename, address):
+    now = datetime.datetime.now().date()
+    msg = MIMEMultipart()
+
+    msg["Subject"] = f"Clock drift for {now}"
+    msg["From"] = "mgalloy@ucar.edu"
+    msg["To"] = address
+
+    msg.attach(MIMEText(""))
+
+    basename = os.path.basename(output_filename)
+    with open(output_filename, "rb") as f:
+        part = MIMEApplication(f.read(), Name=basename)
+
+    part["Content-Disposition"] = f"attachment; filename=\"{basename}\""
+    msg.attach(part)
+
+    s = smtplib.SMTP("localhost")
+    s.send_message(msg)
+    s.quit()
+
+
 def main():
     parser = argparse.ArgumentParser(description="Plot server date/time offsets")
     parser.add_argument("filename", type=str, help="CSV file with times")
     parser.add_argument("-o", "--output", type=str, default="clocks.png",
                         help="output filename")
+    parser.add_argument("-s", "--send", type=str, help="email address to send plot to")
     args = parser.parse_args()
 
     baseline_server = 0
@@ -63,6 +91,8 @@ def main():
                                                        baseline_server=baseline_server)
     plot_offsets(server_names, offsets, args.output, start_time,
                  baseline_server=baseline_server)
+    if args.send is not None:
+        send_plot(args.output, args.send)
 
 
 if __name__ == "__main__":
