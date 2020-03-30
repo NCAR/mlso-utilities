@@ -221,10 +221,43 @@ class Globus:
     """Represents Globus and the actions that can be performed on it.
     """
     def __init__(self, config):
-        pass
+        self.globus_executable = os.path.join(config.get("Globus", "bin_dir"),
+                                              "globus")
+        self.cert = config.get("Globus", "cert")
+        self.local_endpoint_id = config.get("Globus", "local_endpoint_id")
+        self.archive_endpoint_id = config.get("Globus", "archive_endpoint_id")
+        self.archive_endpoint_root_dir = config.get("Globus",
+                                                    "archive_endpoint_root_dir")
 
     def transform_dirname(self, d):
-        return d
+        """Transform instrument name to Globus file system directory name, i.e.,
+           UCoMP -> ucomp.
+        """
+        return d.lower()
+
+    def __enter__(self):
+        """Open connection to Globus"""
+        logging.info("opened connection to Globus")
+
+        # TODO: activate local endpoint
+        globus_cmd_options = f"--force --no-autoactivate --delegate-proxy {self.cert} --proxy-lifetime 720"
+        globus_cmd = f"globus endpoint activate {globus_cmd_options} {local_endpoint_id}"
+        logging.info(globus_cmd)
+
+        return self
+
+    def __exit__(self, exc_type, exc_value, traceback):
+        """Close connection to Globus"""
+        logging.info("closed connection to Globus")
+
+    def put(self, src, dst):
+        """Send src to dst. Do not overwrite dst.
+        """
+        pass
+
+    def file_size(self, filename):
+        """Return file size of given filename in bytes."""
+        pass
 
 
 def move_file(src_filename, dst_root, file_system):
@@ -280,7 +313,10 @@ def main():
     config.read(config_filename)
 
     log_basename = f"{today.strftime('%Y%m%d')}.{args.instrument.lower()}.{method}.log"
-    log_filename = os.path.join(config.get("logging", "dir"), log_basename)
+    log_filename = os.path.join(config.get("logging", "root_dir"),
+                                args.instrument.lower(),
+                                "logs",
+                                log_basename)
 
     logging.basicConfig(filename=log_filename,
                         format=LOG_FMT, datefmt=DATE_FMT,
