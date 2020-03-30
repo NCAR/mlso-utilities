@@ -22,7 +22,7 @@ INSTRUMENT=$2
 
 
 kill_instrument () {
-  pkill -f "mlso-archiverd $1"
+  pkill -f "mlso-archiverd --method hpss $1"
 }
 
 start_instrument () {
