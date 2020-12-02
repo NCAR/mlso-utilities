@@ -11,4 +11,3 @@ install:
 	cp check_clock*.sh $(PREFIX)/bin
 	cp log_clocks.sh $(PREFIX)/bin
 	cp plot_clocks $(PREFIX)/bin
-
