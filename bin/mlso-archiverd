@@ -21,7 +21,7 @@ DATE_FMT = "%Y-%d-%m %H:%M:%S"
 POLL_DELAY = 1.0
 
 # how frequently to check for data, i.e., check every 12 polls for new data
-POLLS_PER_DATA_CHECK = 60
+POLLS_PER_DATA_CHECK = 3
 
 # nicer names for signal constants
 signal_names = collections.defaultdict(str, {signal.SIGINT:  "SIGINT",
@@ -101,6 +101,66 @@ class LocalDirectoryLock:
             os.remove(self.lock_file)
             self.have_lock = False
             logging.debug(f"released lock on {self.dir}")
+
+
+class RemoteFileSystem:
+    """Represents a remove file system accessed via standard ssh/scp commands.
+    """
+    def __init__(self, config):
+        self.name = "Remote file system"
+        self.tag = "remote"
+        self.root = config.get("Remote", "root_dir")
+        self.bin_dir = config.get("Remote", "bin_dir")
+        self.hostname = config.get("Remote", "hostname")
+        self.identity_file = config.get("Remote", "identity_file")
+
+    def transform_dirname(self, d):
+        return d
+    
+    def __enter__(self):
+        """Open connection to local file system"""
+        logging.info("opened connection to remote file system")
+        return self
+    
+    def __exit__(self, exc_type, exc_value, traceback):
+        """Close connection to local file system"""
+        logging.info("closed connection to remote file system")
+
+    def put(self, src, dst):
+        """Send src to dst. Do not overwrite dst.
+        """
+        logging.info(f"putting {src} -> {dst}")
+        cmd = [f"{self.bin_dir}/scp", src, f"{self.hostname}:{dst}"]
+        process = subprocess.Popen(cmd,
+                                   stdout=subprocess.PIPE,
+                                   stderr=subprocess.STDOUT)
+        output, _ = process.communicate()
+        process.wait()
+
+        if process.returncode != 0:
+            cmd_string = " ".join(cmd)
+            logging.error(f"problem with cmd: \"{cmd_string}\"")
+            logging.error(output.decode("utf-8"))
+            raise IOError(f"problem putting {src} -> {dst}")
+
+    def file_size(self, filename):
+        """Return file size of given filename in bytes."""
+        cmd = [f"{self.bin_dir}/ssh",
+               self.hostname,
+               f"stat -c %s {filename}"]
+        process = subprocess.Popen(cmd,
+                                   stdout=subprocess.PIPE,
+                                   stderr=subprocess.STDOUT)
+        output, _ = process.communicate()
+        process.wait()
+
+        if process.returncode != 0:
+            cmd_string = " ".join(cmd)
+            logging.error(f"problem with cmd: \"{cmd_string}\"")
+            logging.error(output)
+            raise IOError(f"problem finding size of {filename}")
+
+        return(int(output))
 
 
 class LocalFileSystem:
@@ -221,13 +281,46 @@ class Globus:
     """Represents Globus and the actions that can be performed on it.
     """
     def __init__(self, config):
+        self.name = "Globus"
+        self.tag = "globus"
+
         self.globus_executable = os.path.join(config.get("Globus", "bin_dir"),
                                               "globus")
         self.cert = config.get("Globus", "cert")
-        self.local_endpoint_id = config.get("Globus", "local_endpoint_id")
-        self.archive_endpoint_id = config.get("Globus", "archive_endpoint_id")
-        self.archive_endpoint_root_dir = config.get("Globus",
-                                                    "archive_endpoint_root_dir")
+
+        self.local_endpoint_name = config.get("Globus", "local_endpoint_name")
+        local_endpoint_owner = config.get("Globus", "local_endpoint_owner")
+        self.local_endpoint_id = self._find_endpoint(self.local_endpoint_name,
+                                                     local_endpoint_owner)
+        logging.info(f"{self.local_endpoint_name}: {self.local_endpoint_id}")
+
+        self.archive_endpoint_name = config.get("Globus", "archive_endpoint_name")
+        archive_endpoint_owner = config.get("Globus", "archive_endpoint_owner")
+        self.archive_endpoint_id = self._find_endpoint(self.archive_endpoint_name,
+                                                       archive_endpoint_owner)
+        logging.info(f"{self.archive_endpoint_name}: {self.archive_endpoint_id}")
+
+        self.root = config.get("Globus",
+                               "archive_endpoint_root_dir")
+
+    def _find_endpoint(self, name, owner):
+        globus_cmd = [self.globus_executable,
+                      "endpoint",
+                      "search",
+                      f"'{name}'",
+                      "--filter-owner-id",
+                      f"{owner}",
+                      "--format",
+                      "UNIX",
+                      "--jq",
+                      "DATA[0].id"]
+        process = subprocess.Popen(globus_cmd,
+                                   encoding="utf-8",
+                                   stdout=subprocess.PIPE,
+                                   stderr=subprocess.STDOUT)
+        output, _ = process.communicate()
+        process.wait()
+        return(output.strip())
 
     def transform_dirname(self, d):
         """Transform instrument name to Globus file system directory name, i.e.,
@@ -239,10 +332,24 @@ class Globus:
         """Open connection to Globus"""
         logging.info("opened connection to Globus")
 
-        # TODO: activate local endpoint
-        globus_cmd_options = f"--force --no-autoactivate --delegate-proxy {self.cert} --proxy-lifetime 720"
-        globus_cmd = f"globus endpoint activate {globus_cmd_options} {local_endpoint_id}"
-        logging.info(globus_cmd)
+        # activate archive endpoint
+        #globus_cmd_options = f"--force --no-autoactivate --delegate-proxy {self.cert} --proxy-lifetime 720"
+        globus_cmd = [self.globus_executable,
+                      "endpoint",
+                      "activate",
+                      "--force",
+                      "--no-autoactivate",
+                      "--delegate-proxy",
+                      f"{self.cert}",
+                      "--proxy-lifetime",
+                      "720",
+                      "{self.archive_endpoint_id}"]
+        process = subprocess.Popen(globus_cmd,
+                                   encoding="utf-8",
+                                   stdout=subprocess.PIPE,
+                                   stderr=subprocess.STDOUT)
+        output, _ = process.communicate()
+        process.wait()
 
         return self
 
@@ -253,20 +360,75 @@ class Globus:
     def put(self, src, dst):
         """Send src to dst. Do not overwrite dst.
         """
-        pass
+        # follow src if is it a symbolic link
+        while os.path.islink(src):
+            src = os.readlink(src)
+
+        logging.info(f"putting {src} -> {dst}")
+
+        task_name = "mlso-archiverd transfer for {os.path.basename(src)}"
+        cmd = [f"{self.globus_executable}",
+               "transfer",
+               "--recursive",
+               "--sync-level",
+               "mtime",
+               "--label"
+               "'{task_name}'",
+               f"{local_endpoint_id}:{src}",
+               f"{archive_endpoint_id}:{dst}"]
+        process = subprocess.Popen(cmd,
+                                   stdout=subprocess.PIPE,
+                                   stderr=subprocess.STDOUT)
+        output, _ = process.communicate()
+        process.wait()
+
+        if process.returncode != 0:
+            cmd_string = " ".join(globus_cmd)
+            logging.error(f"problem with cmd: \"{cmd_string}\"")
+            logging.error(output.decode("utf-8"))
+            raise IOError(f"problem putting {src} -> {dst}")
+
 
     def file_size(self, filename):
         """Return file size of given filename in bytes."""
-        pass
+        globus_cmd = [self.globus_executable,
+                      "ls",
+                      "-l",
+                      "--filter",
+                      f"{os.path.basename(filename)}",
+                      "--format",
+                      "UNIX",
+                      "--jq",
+                      "DATA[0].size",
+                      f"{self.archive_endpoint_id}:{os.path.dirname(filename)}"]
+        print(" ".join(globus_cmd))
+        process = subprocess.Popen(globus_cmd,
+                                   encoding="utf-8",
+                                   stdout=subprocess.PIPE,
+                                   stderr=subprocess.STDOUT)
+        output, _ = process.communicate()
+        process.wait()
+
+        if process.returncode != 0:
+            cmd_string = " ".join(globus_cmd)
+            logging.error(f"problem with cmd: \"{cmd_string}\"")
+            logging.error(output)
+            raise IOError(f"problem finding size of {filename}")
+
+        return(int(output[0].strip()))
 
 
 def move_file(src_filename, dst_root, file_system):
     """Send source file to destination root with the same basename using the
     given file system. Delete source file when confirmed done.
     """
+    if os.path.islink(src_filename):
+        src_path = os.readlink(src_filename)
+    else:
+        src_path = src_filename
 
     basename = os.path.basename(src_filename)
-    local_size = os.path.getsize(src_filename)
+    local_size = os.path.getsize(src_path)
     year = basename[0:4]
 
     dst_filename = os.path.join(dst_root, year, basename)
@@ -295,7 +457,7 @@ def main():
     parser.add_argument("instrument", type=str,
                         help="instrument to watch for, e.g., KCor, CoMP, UCoMP, etc.")
     parser.add_argument("-m", "--method", default="local",
-                        help="archival method: hpss, globus, or local")
+                        help="archival method: hpss, globus, remote, or  local")
     parser.add_argument("-c", "--config-filename", default=None,
                         help="config filename")
     args = parser.parse_args()
@@ -328,7 +490,10 @@ def main():
     logging.info(f"starting {parser.prog}")
 
     try:
-        archive_fs = {"hpss": HPSS, "local": LocalFileSystem, "globus": Globus}[method]
+        archive_fs = {"hpss": HPSS,
+                      "local": LocalFileSystem,
+                      "remote": RemoteFileSystem,
+                      "globus": Globus}[method]
     except KeyError:
         msg = f"unknown archive file system: {method}"
         logging.error(msg)
