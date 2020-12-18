@@ -457,7 +457,7 @@ def main():
     parser.add_argument("instrument", type=str,
                         help="instrument to watch for, e.g., KCor, CoMP, UCoMP, etc.")
     parser.add_argument("-m", "--method", default="local",
-                        help="archival method: hpss, globus, remote, or  local")
+                        help="archival method: hpss, globus, remote, or local")
     parser.add_argument("-c", "--config-filename", default=None,
                         help="config filename")
     args = parser.parse_args()
