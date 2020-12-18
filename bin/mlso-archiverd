@@ -18,10 +18,10 @@ LOG_FMT  = "%(asctime)s %(levelname)s: %(module)s: %(message)s"
 DATE_FMT = "%Y-%d-%m %H:%M:%S"
 
 # time between polling (seconds)
-POLL_DELAY = 1.0
+POLL_DELAY = 10.0
 
 # how frequently to check for data, i.e., check every 12 polls for new data
-POLLS_PER_DATA_CHECK = 3
+POLLS_PER_DATA_CHECK = 1
 
 # nicer names for signal constants
 signal_names = collections.defaultdict(str, {signal.SIGINT:  "SIGINT",
@@ -130,7 +130,11 @@ class RemoteFileSystem:
         """Send src to dst. Do not overwrite dst.
         """
         logging.info(f"putting {src} -> {dst}")
-        cmd = [f"{self.bin_dir}/scp", src, f"{self.hostname}:{dst}"]
+        cmd = [f"{self.bin_dir}/scp",
+               "-i",
+               f"{self.identity_file}",
+               src,
+               f"{self.hostname}:{dst}"]
         process = subprocess.Popen(cmd,
                                    stdout=subprocess.PIPE,
                                    stderr=subprocess.STDOUT)
@@ -146,6 +150,8 @@ class RemoteFileSystem:
     def file_size(self, filename):
         """Return file size of given filename in bytes."""
         cmd = [f"{self.bin_dir}/ssh",
+               "-i",
+               f"{self.identity_file}",
                self.hostname,
                f"stat -c %s {filename}"]
         process = subprocess.Popen(cmd,
