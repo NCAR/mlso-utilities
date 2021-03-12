@@ -15,7 +15,7 @@ import time
 
 # logging options
 LOG_FMT  = "%(asctime)s %(levelname)s: %(module)s: %(message)s"
-DATE_FMT = "%Y-%d-%m %H:%M:%S"
+DATE_FMT = "%Y-%m-%d %H:%M:%S"
 
 # time between polling (seconds)
 POLL_DELAY = 10.0
