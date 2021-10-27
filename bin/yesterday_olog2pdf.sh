@@ -5,6 +5,6 @@ cd /hao/ftp/d5/mlso/log/observer/${YEAR}
 
 YESTERDAY_OLOG_FILENAME=$(date +"mlso.%Yd%j.olog" --date="-1 day")
 
-OLOG2PDF=/home/mgalloy/projects/mlso-utilities/bin/olog2pdf.sh
+OLOG2PDF=$(dirname $0)/olog2pdf.sh
 
 ${OLOG2PDF} ${YESTERDAY_OLOG_FILENAME}
