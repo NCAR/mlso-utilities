@@ -17,4 +17,5 @@ install:
 	scp $(SCP_OPTIONS) log_clocks.sh kodiak.mlso.ucar.edu:$(PREFIX)/bin
 	scp $(SCP_OPTIONS) log_clocks.sh dusk.mlso.ucar.edu:$(DUSK_PREFIX)/bin
 	cp plot_clocks $(PREFIX)/bin
-
+	cp olog2pdf.sh $(PREFIX)/bin
+	cp yesterday_olog2pdf.sh $(PREFIX)/bin
