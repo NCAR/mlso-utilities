@@ -1,13 +1,14 @@
 #!/usr/bin/env python
 
 import argparse
+import base64
 import calendar
 import os
 
 from jinja2 import Template
 
 
-RAW_DIR = '/hao/mlsodata1/Data/KCor/raw'
+RAW_DIR = '/hao/dawn/Data/KCor/raw'
 
 TEMPLATE = '''<html>
   <head>
@@ -21,10 +22,10 @@ TEMPLATE = '''<html>
   </head>
   <body>
     <h1>KCor data for {{ "%04d"|format(year) }} - {{ "%02d"|format(month) }}</h1>
-    {% for d in days %}
+    {% for d, b64 in data %}
     <div>
       <h4>{{ d }}</h4>
-      <img src="{{ raw_dir }}/{{ d }}/q/{{ d }}.kcor.quality.png"/>
+      <img src="data:image/png;base64,{{ b64 }}" alt="{{ d }}.kcor.quality.png"/>
     </div>
     {% endfor %}
   </body>
@@ -35,15 +36,20 @@ def output(year, month, output_filename):
     start_day, n_days = calendar.monthrange(year, month)
 
     days = []
+    base64_images = []
     for d in range(n_days):
         date = '%04d%02d%02d' % (year, month, d + 1)
         plot_file = '%s/%s/q/%s.kcor.quality.png' % (RAW_DIR, date, date)
         if os.path.exists(plot_file):
             days.append(date)
+            with open(plot_file, "rb") as f:
+                b = f.read()
+            b64 = base64.b64encode(b).decode()
+            base64_images.append(b64)
 
     t = Template(TEMPLATE)
     with open(output_filename, 'w') as f:
-        f.write(t.render(year=year, month=month, days=days, raw_dir=RAW_DIR))
+        f.write(t.render(year=year, month=month, data=zip(days, base64_images)))
 
 
 def main():
