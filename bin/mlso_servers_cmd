@@ -1,0 +1,13 @@
+#!/bin/sh
+
+CMD=$1
+
+if [ -z "${MLSO_SERVERS}" ]; then
+  MLSO_SERVERS=( dawn mahi sunrise twilight sunset kaula mlsodata compdata )
+fi
+
+for s in ${MLSO_SERVERS[@]}; do
+  echo "#### $s ####"
+  ssh -Y $s ${CMD}
+  echo
+done

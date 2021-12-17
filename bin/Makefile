@@ -19,3 +19,4 @@ install:
 	cp plot_clocks $(PREFIX)/bin
 	cp olog2pdf.sh $(PREFIX)/bin
 	cp yesterday_olog2pdf.sh $(PREFIX)/bin
+	cp mlso_servers_cmd $(PREFIX)/bin
