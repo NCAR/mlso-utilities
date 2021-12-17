@@ -11,15 +11,15 @@ for d in "${dirs[@]}"; do
   echo "checking $d..."
 
   # find non-cordyn files
-  find $ROOT_DIR ! -group cordyn -exec sh -c "echo Changing ownership of {}; chown :cordyn {}" \;
+  find $ROOT_DIR ! -group cordyn -exec sh -c "echo Changing ownership of \"{}\"; chown :cordyn \"{}\"" \;
 
   # find non group-readable files
-  find $ROOT_DIR ! -perm -g+r -exec sh -c "echo Making {} group readable; chmod g+r {}" \;
+  find $ROOT_DIR ! -perm -g+r -exec sh -c "echo Making \"{}\" group readable; chmod g+r \"{}\"" \;
 
   # find non group-writeable files
-  find $ROOT_DIR ! -perm -g+w -exec sh -c "echo Making {} group writeable; chmod g+w {}" \;
+  find $ROOT_DIR ! -perm -g+w -exec sh -c "echo Making \"{}\" group writeable; chmod g+w \"{}\"" \;
 
   # find directories which are not group executable
-  find $ROOT_DIR ! -perm -g+x -and -type d -exec sh -c "echo Making directory {} executable; chmod g+x {}" \;
+  find $ROOT_DIR ! -perm -g+x -and -type d -exec sh -c "echo Making directory \"{}\" executable; chmod g+x \"{}\"" \;
 done
 
