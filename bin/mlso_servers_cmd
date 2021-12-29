@@ -3,7 +3,7 @@
 CMD=$1
 
 if [ -z "${MLSO_SERVERS}" ]; then
-  MLSO_SERVERS=( dawn mahi sunrise twilight sunset kaula mlsodata compdata )
+  MLSO_SERVERS=( dawn mahi sunrise twilight sunset kaula mlsodata compdata sundog1 sundog2 sundog3 )
 fi
 
 for s in ${MLSO_SERVERS[@]}; do
