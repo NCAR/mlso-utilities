@@ -1,5 +1,7 @@
 #!/bin/sh
 
+umask u=rw,g=rw,o=r
+
 YEAR=$(date +"%Y" --date="-1 day")
 cd /hao/ftp/d5/mlso/log/observer/${YEAR}
 
