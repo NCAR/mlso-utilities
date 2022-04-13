@@ -8,7 +8,7 @@ OUTPUT_FILENAME=$(mktemp /tmp/doi-check.XXXXXXXXX)
 ${PYTHON} ${ROOT}/mlso_check_dois.py ${DOIS} > ${OUTPUT_FILENAME}
 STATUS=$?
 
-echo "Sent from $0 ($(whoami)@$(hostname))" >> ${OUTPUT_FILENAME}
+echo -e "\nSent from $0 ($(whoami)@$(hostname))" >> ${OUTPUT_FILENAME}
 
 if [ $STATUS -eq 0 ]; then
   STATUS_DESCRIPTION=success
