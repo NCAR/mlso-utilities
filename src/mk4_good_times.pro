@@ -13,7 +13,7 @@ pro mk4_good_times_print_date, lun, date
   seconds = strmid(date, 13, 2)
 
   printf, lun, year, month, day, hours, minutes, seconds, $
-         format='(%"%s-%s-%s %s:%s:%s")'
+         format='(%"%s %s %s %s %s %s")'
 end
 
 
