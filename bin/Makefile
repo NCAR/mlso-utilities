@@ -22,3 +22,6 @@ install:
 	cp mlso_servers_cmd $(PREFIX)/bin
 	cp fix_noncordyn_files.sh $(PREFIX)/bin
 	cp find_noncordyn_files.sh $(PREFIX)/bin
+	cp mlso_check_dois.py $(PREFIX)/bin
+	cp mlso_check_dois.sh $(PREFIX)/bin
+	cp mlso_dois.csv $(PREFIX)/bin
