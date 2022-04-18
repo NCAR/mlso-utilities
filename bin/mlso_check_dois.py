@@ -17,7 +17,11 @@ def check_dois(records):
         standard = r["standard"].strip()
         print(f"checking resolving {doi}...")
 
-        r = requests.get(doi)
+        try:
+            r = requests.get(doi, timeout=10.0)
+        except requests.exceptions.Timeout as e:
+            print(f"    timed out")
+            return(True)
 
         if len(r.history) > 1:
             result = r.history[-1].url
