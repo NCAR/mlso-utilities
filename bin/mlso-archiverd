@@ -527,7 +527,7 @@ def main():
                                     move_file(src_filename, dst_root, file_system)
                                 except IOError as e:
                                     logging.warning(e)
-                                    break
+                                    #break
 
                                 if signal_watcher.is_terminated: break
 
