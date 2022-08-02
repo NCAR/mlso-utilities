@@ -16,6 +16,7 @@ backup () {
   $cmd >> ${LOG}
   CMD_STATUS=$?
   if [ $CMD_STATUS -ne 0 ]; then STATUS=$CMD_STATUS; fi
+  echo -e "\n\n" >> $LOG
 }
 
 SRC_ROOT=/hao/ftpd5/mlso/log
