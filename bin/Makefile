@@ -25,3 +25,4 @@ install:
 	cp mlso_check_dois.py $(PREFIX)/bin
 	cp mlso_check_dois.sh $(PREFIX)/bin
 	cp mlso_dois.csv $(PREFIX)/bin
+	cp backup-logs.sh $(PREFIX)/bin
