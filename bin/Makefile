@@ -6,6 +6,7 @@ SCP_OPTIONS=-i /home/mgalloy/.ssh/id_rsa2
 
 install:
 	cp *.sh $(PREFIX)/bin
+	cp doy $(PREFIX)/bin
 	cp hpss $(PREFIX)/bin
 	cp compare_hpss_dirs $(PREFIX)/bin
 	cp mlso-archiverd $(PREFIX)/bin
