@@ -51,7 +51,7 @@ def plot_offsets(server_names, offsets, output_filename, start_time,
     ax.set_xlabel(f"Hours since {start_datetime}")
     ax.set_ylabel("Offset [sec]")
 
-    ax.grid(b=True, which="major", color="lightgrey", linestyle=":")
+    ax.grid(visible=True, which="major", color="lightgrey", linestyle=":")
     ax.set_title(f"Clock offset drift for servers since {start_datetime}")
 
     fig.savefig(output_filename)
