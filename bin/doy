@@ -11,7 +11,7 @@ def ymd2doy(date:str):
 
 if __name__ == "__main__":
     parser = argparse.ArgumentParser(description="day of year converter")
-    parser.add_argument("date", type=str)
+    parser.add_argument("date", type=str, help="date in the form YYYYMMDD")
     args = parser.parse_args()
 
     print(ymd2doy(args.date))
