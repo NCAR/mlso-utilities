@@ -9,9 +9,20 @@ def ymd2doy(date:str):
     return(d.strftime("%Yd%j"))
 
 
+def doy2ymd(doy:str):
+    d = datetime.datetime.strptime(doy, "%Yd%j")
+    return(d.strftime("%Y%m%d"))
+
+
 if __name__ == "__main__":
     parser = argparse.ArgumentParser(description="day of year converter")
-    parser.add_argument("date", type=str, help="date in the form YYYYMMDD")
+
+    parser.add_argument("-r", "--reverse", action="store_true",
+                        help="set to convert day of year to YYYYMMDD")
+    parser.add_argument("date", type=str,
+                        help="date in the form YYYYMMDD, or if -r is set, YYYYdDDD")
+
     args = parser.parse_args()
 
-    print(ymd2doy(args.date))
+    r = doy2ymd if args.reverse else ymd2doy
+    print(r(args.date))
