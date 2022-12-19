@@ -30,7 +30,7 @@ def plot_offsets(server_names, offsets, output_filename, start_time,
                  threshold_time=10.0, baseline_server=0):
     start_datetime = datetime.datetime.fromtimestamp(start_time)
 
-    fig, ax = plt.subplots(figsize=(10, 5))
+    fig, ax = plt.subplots(figsize=(10, 6))
 
     for s, name in enumerate(server_names):
         ax.plot(offsets[:, s], label=name)
@@ -48,11 +48,17 @@ def plot_offsets(server_names, offsets, output_filename, start_time,
     ax.get_xaxis().tick_bottom()
     ax.get_yaxis().tick_left()
     ax.set_ylim([-180.0, 180.0])
-    ax.set_xlabel(f"Hours since {start_datetime}")
+    ax.set_xlabel(f"Date")
     ax.set_ylabel("Offset [sec]")
 
     ax.grid(visible=True, which="major", color="lightgrey", linestyle=":")
     ax.set_title(f"Clock offset drift for servers since {start_datetime}")
+
+    xticks = ax.get_xticks()
+    xlabels = [(start_datetime + datetime.timedelta(hours=t)).strftime("%Y-%m-%d") for t in xticks]
+    xlabels[0] = ""
+    _ = ax.set_xticks(xticks, xlabels)
+    plt.setp(ax.get_xticklabels(), rotation=15, ha="right", rotation_mode="anchor")
 
     fig.savefig(output_filename)
 

@@ -12,11 +12,7 @@ install:
 	cp mlso-archiverd $(PREFIX)/bin
 	cp mlso-archiver.cfg $(PREFIX)/bin
 	cp check_clock*.sh $(PREFIX)/bin
-	scp $(SCP_OPTIONS) check_clock*.sh kodiak.mlso.ucar.edu:$(PREFIX)/bin
-	scp $(SCP_OPTIONS) check_clock*.sh dusk.mlso.ucar.edu:$(DUSK_PREFIX)/bin
 	cp log_clocks.sh $(PREFIX)/bin
-	scp $(SCP_OPTIONS) log_clocks.sh kodiak.mlso.ucar.edu:$(PREFIX)/bin
-	scp $(SCP_OPTIONS) log_clocks.sh dusk.mlso.ucar.edu:$(DUSK_PREFIX)/bin
 	cp plot_clocks $(PREFIX)/bin
 	cp olog2pdf.sh $(PREFIX)/bin
 	cp yesterday_olog2pdf.sh $(PREFIX)/bin
@@ -27,3 +23,7 @@ install:
 	cp mlso_check_dois.sh $(PREFIX)/bin
 	cp mlso_dois.csv $(PREFIX)/bin
 	cp backup-logs.sh $(PREFIX)/bin
+	scp $(SCP_OPTIONS) check_clock*.sh kodiak.mlso.ucar.edu:$(PREFIX)/bin
+	scp $(SCP_OPTIONS) check_clock*.sh dusk.mlso.ucar.edu:$(DUSK_PREFIX)/bin
+	scp $(SCP_OPTIONS) log_clocks.sh kodiak.mlso.ucar.edu:$(PREFIX)/bin
+	scp $(SCP_OPTIONS) log_clocks.sh dusk.mlso.ucar.edu:$(DUSK_PREFIX)/bin
