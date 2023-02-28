@@ -15,13 +15,19 @@ def check_dois(records):
     for r in records:
         doi = r["doi"].strip()
         standard = r["standard"].strip()
-        print(f"checking resolving {doi}...")
+        print(f"checking resolving {doi} -> {standard}")
 
         try:
-            r = requests.get(doi, timeout=10.0)
+            r = requests.get(doi, timeout=10.0, allow_redirects=True)
+        except requests.ConnectionError as e:
+            print(f"    connection error\n")
+            print(f"    {e}\n")
+            has_error = True
+            continue
         except requests.exceptions.Timeout as e:
             print(f"    timed out")
-            return(True)
+            has_error = True
+            continue
 
         if len(r.history) > 1:
             result = r.history[-1].url
@@ -33,6 +39,7 @@ def check_dois(records):
         else:
             print(f"  error: {result}, not {standard}")
             has_error = True
+
     return(has_error)
 
 
