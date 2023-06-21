@@ -14,3 +14,4 @@ bash $(basename ${URL}) -b -p ${PREFIX}
 pip install rich
 pip install watchfiles
 pip install pre_commit
+pip install mysql-connector-python
