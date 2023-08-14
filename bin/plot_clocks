@@ -13,7 +13,8 @@ import numpy as np
 
 
 def parse_datafile(filename, acquisition_time=1.0, baseline_server=0):
-    data = np.genfromtxt(filename, delimiter=',', skip_header=1, dtype=np.longlong)
+    data = np.genfromtxt(filename, delimiter=',', skip_header=1, dtype=np.float64,
+                         filling_values=np.nan)
     with open(filename) as f:
         server_names = [name.rstrip() for name in f.readline().split(', ')]
 
