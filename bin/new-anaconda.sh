@@ -12,8 +12,5 @@ mv ${PREFIX} ${PREFIX}.old
 wget ${URL}
 bash $(basename ${URL}) -b -p ${PREFIX}
 
-pip install rich
-pip install watchfiles
-pip install pre_commit
-pip install mysql-connector-python
-pip install logmerger
+pip install -r requirements.txt
+

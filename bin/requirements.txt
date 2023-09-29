@@ -1,0 +1,6 @@
+rich
+watchfiles
+pre_commit
+mysql-connector-python
+logmerger
+requests
