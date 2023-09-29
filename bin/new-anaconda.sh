@@ -2,7 +2,8 @@
 
 # run on dawn
 
-URL=https://repo.anaconda.com/archive/Anaconda3-2023.03-Linux-x86_64.sh
+URL=https://repo.anaconda.com/archive/Anaconda3-2023.07-2-Linux-x86_64.sh
+#URL=https://repo.anaconda.com/archive/Anaconda3-2023.03-Linux-x86_64.sh
 #URL=https://repo.anaconda.com/archive/Anaconda3-2022.05-Linux-x86_64.sh
 PREFIX=${HOME}/anaconda3
 
@@ -15,3 +16,4 @@ pip install rich
 pip install watchfiles
 pip install pre_commit
 pip install mysql-connector-python
+pip install logmerger
