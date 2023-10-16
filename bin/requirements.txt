@@ -4,3 +4,4 @@ pre_commit
 mysql-connector-python
 logmerger
 requests
+hatchling
