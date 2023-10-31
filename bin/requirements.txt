@@ -5,3 +5,4 @@ mysql-connector-python
 logmerger
 requests
 hatchling
+myst-parser
