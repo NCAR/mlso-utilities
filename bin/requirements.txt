@@ -6,3 +6,4 @@ logmerger
 requests
 hatchling
 myst-parser
+netCDF4
