@@ -9,4 +9,7 @@ YESTERDAY_OLOG_FILENAME=$(date +"mlso.%Yd%j.olog" --date="-1 day")
 
 OLOG2PDF=$(dirname $0)/olog2pdf.sh
 
-${OLOG2PDF} ${YESTERDAY_OLOG_FILENAME}
+if [ -f "${YESTERDAY_OLOG_FILENAME}" ]; then
+    ${OLOG2PDF} ${YESTERDAY_OLOG_FILENAME}
+fi
+
