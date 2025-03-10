@@ -34,12 +34,22 @@ def plot_offsets(server_names, offsets, output_filename, start_time,
     fig, ax = plt.subplots(figsize=(10, 6))
 
     for s, name in enumerate(server_names):
+        # skip this column if there was never any good data
+        n_good_values = (~np.isnan(offsets[:, s])).sum()
+        if np.isnan(offsets[:, s]).all() or n_good_values < 10:
+            continue
+
         ax.plot(offsets[:, s], label=name)
+        valid_indices = np.where(~np.isnan(offsets[:, s]))[0]
         if abs(offsets[-1, s]) > threshold_time or s == baseline_server:
-            ax.text(offsets.shape[0], offsets[-1, s], f"{offsets[-1, s]} s [{name}]",
+            ax.text(offsets.shape[0],
+                    offsets[valid_indices[-1], s],
+                    f"{offsets[-1, s]} s [{name}]",
                     fontsize=8.0,
                     verticalalignment="center")
-            ax.text(-0.5, offsets[0, s], f"{offsets[0, s]} s",
+            ax.text(-0.5,
+                    offsets[valid_indices[0], s],
+                    f"{offsets[0, s]} s",
                     fontsize=8.0,
                     horizontalalignment="right",
                     verticalalignment="center")
