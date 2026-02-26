@@ -3,7 +3,8 @@
 umask u=rw,g=rw,o=r
 
 YEAR=$(date +"%Y" --date="-1 day")
-cd /hao/ftp/d5/mlso/log/observer/${YEAR}
+DIR=/hao/ftp/d5/mlso/log/observer/${YEAR}
+cd ${DIR}
 
 YESTERDAY_OLOG_FILENAME=$(date +"mlso.%Yd%j.olog" --date="-1 day")
 

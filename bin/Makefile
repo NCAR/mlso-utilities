@@ -15,6 +15,7 @@ install:
 	cp log_clocks.sh $(PREFIX)/bin
 	cp plot_clocks $(PREFIX)/bin
 	cp olog2pdf.sh $(PREFIX)/bin
+	cp yyyyddoy2yyyymmdd.py $(PREFIX)/bin
 	cp yesterday_olog2pdf.sh $(PREFIX)/bin
 	cp mlso_servers_cmd $(PREFIX)/bin
 	cp fix_noncordyn_files.sh $(PREFIX)/bin
