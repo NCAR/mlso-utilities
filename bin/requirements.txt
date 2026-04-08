@@ -8,3 +8,4 @@ hatchling
 myst-parser
 netCDF4
 ChiantiPy
+inotify
