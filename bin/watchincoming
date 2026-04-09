@@ -17,8 +17,8 @@ RAW_BASEDIR = "/home/mgalloy/raw"
 LOGGING_BASEDIR = "/home/mgalloy/logging"
 LOG_BASENAME_FORMAT = "{date}.watchincoming.log"
 
-#INCOMING_BASEDIR = "/hao/dawn/Data/KCor/raw/transfer"
-#LOGGING_BASEDIR = "/hao/acos/kcor/logs"
+# INCOMING_BASEDIR = "/hao/dawn/Data/KCor/raw/transfer"
+# LOGGING_BASEDIR = "/hao/acos/kcor/logs"
 
 
 def get_current_date():
@@ -32,9 +32,12 @@ def change_date(notifier, old_watch_id, new_date, logger):
     """Change the current date, i.e., watch the directory corresponding to
     `new_date` and stop watching the old date directory.
     """
+
+    update_handler(logger, new_date)
+
     if old_watch_id is not None:
-      notifier.remove_watch_with_id(old_watch_id)
-      logger.info(f"removing old watch [{old_watch_id=}]")
+        notifier.remove_watch_with_id(old_watch_id)
+        logger.info(f"removing old watch [watch ID: {old_watch_id}]")
 
     incoming_dir = f"{INCOMING_BASEDIR}/{new_date}"
     if not os.path.isdir(incoming_dir):
@@ -42,26 +45,37 @@ def change_date(notifier, old_watch_id, new_date, logger):
         logger.info(f"created new incoming directory {incoming_dir}")
 
     new_watch_id = notifier.add_watch(incoming_dir, EVENT_FLAGS)
-    logger.info(f"watching {incoming_dir} [{new_watch_id=}]")
+    logger.info(f"watching {incoming_dir} [watch ID: {new_watch_id}]")
 
-    # [TODO]: change the filename the logger is outputting to
     return new_watch_id
 
 
-def setup_logger():
-    """Setup the logger.
-    """
-    logger = logging.getLogger("watchincoming")
-    logger.setLevel(logging.DEBUG)
+def update_handler(logger, date):
+    year = date[0:4]
 
-    handler = logging.StreamHandler()
+    if len(logger.handlers) > 0:
+        logger.info(f"closing log")
+        logger.removeHandler(logger.handlers[0])
+
+    log_basename = f"{date}.kcor.watchincoming.log"
+    log_dir = f"{LOGGING_BASEDIR}/{year}"
+    log_filename = f"{log_dir}/{log_basename}"
+    if not os.path.isdir(log_dir):
+        os.mkdir(log_dir)
+
+    handler = logging.FileHandler(log_filename)
     handler.setLevel(logging.DEBUG)
 
-    formatter = logging.Formatter("%(asctime)s: %(message)s",
-                                  "%Y%m%d.%H%M%S")
+    formatter = logging.Formatter("%(asctime)s: %(message)s", "%Y%m%d.%H%M%S")
     handler.setFormatter(formatter)
 
     logger.addHandler(handler)
+
+
+def setup_logger():
+    """Setup the logger."""
+    logger = logging.getLogger("watchincoming")
+    logger.setLevel(logging.DEBUG)
 
     return logger
 
@@ -96,7 +110,8 @@ def main():
                     watch_id = change_date(notifier, watch_id, watch_date, logger)
     except KeyboardInterrupt as e:
         print()
+        logger.info("quitting process")
 
 
 if __name__ == "__main__":
-   main()
+    main()
