@@ -9,26 +9,33 @@ import shutil
 import inotify.adapters
 import inotify.constants
 
-EVENT_FLAGS = inotify.constants.IN_CLOSE_WRITE
 
-INCOMING_BASEDIR = "/home/mgalloy/incoming"
-RAW_BASEDIR = "/home/mgalloy/raw"
+WATCH_EVENT_FLAGS = inotify.constants.IN_CLOSE_WRITE
 
-LOGGING_BASEDIR = "/home/mgalloy/logging"
+# INCOMING_BASEDIR = "/home/mgalloy/incoming"
+# RAW_BASEDIR = "/home/mgalloy/raw"
+# LOGGING_BASEDIR = "/home/mgalloy/logging"
+
+INCOMING_BASEDIR = "/hao/dawn/Data/KCor/raw/transfer"
+RAW_BASEDIR = "/hao/dawn/Data/KCor/raw"
+LOGGING_BASEDIR = "/hao/acos/kcor/logs"
+
 LOG_BASENAME_FORMAT = "{date}.kcor.watchincoming.log"
-
-# INCOMING_BASEDIR = "/hao/dawn/Data/KCor/raw/transfer"
-# LOGGING_BASEDIR = "/hao/acos/kcor/logs"
 
 
 def get_current_date():
     """Get the current date in the format "YYYYMMDD" as used in the directory name
     of the watched directory.
     """
-    return datetime.datetime.now().strftime("%Y%m%d%H%M")
+    return datetime.datetime.now().strftime("%Y%m%d")
 
 
-def change_date(notifier, old_watch_id, new_date, logger):
+def change_date(
+    notifier: inotify.adapters.Inotify,
+    old_watch_id: int,
+    new_date: str,
+    logger: logging.Logger,
+):
     """Change the current date, i.e., watch the directory corresponding to
     `new_date` and stop watching the old date directory.
     """
@@ -44,13 +51,16 @@ def change_date(notifier, old_watch_id, new_date, logger):
         os.mkdir(incoming_dir)
         logger.info(f"created new incoming directory {incoming_dir}")
 
-    new_watch_id = notifier.add_watch(incoming_dir, EVENT_FLAGS)
+    new_watch_id = notifier.add_watch(incoming_dir, WATCH_EVENT_FLAGS)
     logger.info(f"watching {incoming_dir} [watch ID: {new_watch_id}]")
 
     return new_watch_id
 
 
-def update_handler(logger, date):
+def update_handler(logger: logging.Logger, date: str):
+    """Update the logging handler to point to use the log file for the next day.
+    [TODO]: should look into RotatingFileHandler for this.
+    """
     year = date[0:4]
 
     if len(logger.handlers) > 0:
