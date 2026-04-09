@@ -15,7 +15,7 @@ INCOMING_BASEDIR = "/home/mgalloy/incoming"
 RAW_BASEDIR = "/home/mgalloy/raw"
 
 LOGGING_BASEDIR = "/home/mgalloy/logging"
-LOG_BASENAME_FORMAT = "{date}.watchincoming.log"
+LOG_BASENAME_FORMAT = "{date}.kcor.watchincoming.log"
 
 # INCOMING_BASEDIR = "/hao/dawn/Data/KCor/raw/transfer"
 # LOGGING_BASEDIR = "/hao/acos/kcor/logs"
@@ -57,7 +57,7 @@ def update_handler(logger, date):
         logger.info(f"closing log")
         logger.removeHandler(logger.handlers[0])
 
-    log_basename = f"{date}.kcor.watchincoming.log"
+    log_basename = LOG_BASENAME_FORMAT.format(date=date)
     log_dir = f"{LOGGING_BASEDIR}/{year}"
     log_filename = f"{log_dir}/{log_basename}"
     if not os.path.isdir(log_dir):
