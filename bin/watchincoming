@@ -12,15 +12,23 @@ import inotify.constants
 
 WATCH_EVENT_FLAGS = inotify.constants.IN_CLOSE_WRITE
 
+# [TODO]: should move all of these global variables to a config file
+
+# For testing:
 # INCOMING_BASEDIR = "/home/mgalloy/incoming"
 # RAW_BASEDIR = "/home/mgalloy/raw"
 # LOGGING_BASEDIR = "/home/mgalloy/logging"
 
+# Production settings
 INCOMING_BASEDIR = "/hao/dawn/Data/KCor/raw/transfer"
 RAW_BASEDIR = "/hao/dawn/Data/KCor/raw"
 LOGGING_BASEDIR = "/hao/acos/kcor/logs"
 
-LOG_BASENAME_FORMAT = "{date}.kcor.watchincoming.log"
+LOG_BASENAME_FORMAT = "{date}.kcor.transfer.log"
+LOG_FORMAT = "%(asctime)s %(levelname)s: %(message)s"
+LOG_DATE_FORMAT = "%Y-%m-%d %H:%M:%S"
+
+FULL_FILESIZE = 16782976
 
 
 def get_current_date():
@@ -76,7 +84,7 @@ def update_handler(logger: logging.Logger, date: str):
     handler = logging.FileHandler(log_filename)
     handler.setLevel(logging.DEBUG)
 
-    formatter = logging.Formatter("%(asctime)s: %(message)s", "%Y%m%d.%H%M%S")
+    formatter = logging.Formatter(LOG_FORMAT, LOG_DATE_FORMAT)
     handler.setFormatter(formatter)
 
     logger.addHandler(handler)
@@ -84,6 +92,8 @@ def update_handler(logger: logging.Logger, date: str):
 
 def setup_logger():
     """Setup the logger."""
+    logging.addLevelName(logging.WARNING, "WARN")   # make same format as IDL logs
+
     logger = logging.getLogger("watchincoming")
     logger.setLevel(logging.DEBUG)
 
@@ -110,8 +120,13 @@ def main():
                 if not os.path.isdir(raw_dir):
                     os.mkdir(raw_dir)
                     logger.info(f"created new raw directory {raw_dir}")
-                shutil.copy(incoming_filename, raw_dir)
-                logger.info(f"{basename} copied to {raw_dir}")
+                incoming_filesize = os.path.getsize(incoming_filename)
+                if incoming_filesize == FULL_FILESIZE:
+                    shutil.copy(incoming_filename, raw_dir)
+                    logger.info(f"{basename} copied to {raw_dir}")
+                else:
+                    logger.warning(f"{basename} incomplete, {incoming_filesize} != {FULL_FILESIZE} bytes")
+                    logger.warning("not copying")
             else:
                 # check for date changes
                 new_current_date = get_current_date()
