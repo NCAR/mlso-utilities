@@ -1,0 +1,102 @@
+#!/usr/bin/env python
+
+import argparse
+import datetime
+import logging
+import os
+import shutil
+
+import inotify.adapters
+import inotify.constants
+
+EVENT_FLAGS = inotify.constants.IN_CLOSE_WRITE
+
+INCOMING_BASEDIR = "/home/mgalloy/incoming"
+RAW_BASEDIR = "/home/mgalloy/raw"
+
+LOGGING_BASEDIR = "/home/mgalloy/logging"
+LOG_BASENAME_FORMAT = "{date}.watchincoming.log"
+
+#INCOMING_BASEDIR = "/hao/dawn/Data/KCor/raw/transfer"
+#LOGGING_BASEDIR = "/hao/acos/kcor/logs"
+
+
+def get_current_date():
+    """Get the current date in the format "YYYYMMDD" as used in the directory name
+    of the watched directory.
+    """
+    return datetime.datetime.now().strftime("%Y%m%d%H%M")
+
+
+def change_date(notifier, old_watch_id, new_date, logger):
+    """Change the current date, i.e., watch the directory corresponding to
+    `new_date` and stop watching the old date directory.
+    """
+    if old_watch_id is not None:
+      notifier.remove_watch_with_id(old_watch_id)
+      logger.info(f"removing old watch [{old_watch_id=}]")
+
+    incoming_dir = f"{INCOMING_BASEDIR}/{new_date}"
+    if not os.path.isdir(incoming_dir):
+        os.mkdir(incoming_dir)
+        logger.info(f"created new incoming directory {incoming_dir}")
+
+    new_watch_id = notifier.add_watch(incoming_dir, EVENT_FLAGS)
+    logger.info(f"watching {incoming_dir} [{new_watch_id=}]")
+
+    # [TODO]: change the filename the logger is outputting to
+    return new_watch_id
+
+
+def setup_logger():
+    """Setup the logger.
+    """
+    logger = logging.getLogger("watchincoming")
+    logger.setLevel(logging.DEBUG)
+
+    handler = logging.StreamHandler()
+    handler.setLevel(logging.DEBUG)
+
+    formatter = logging.Formatter("%(asctime)s: %(message)s",
+                                  "%Y%m%d.%H%M%S")
+    handler.setFormatter(formatter)
+
+    logger.addHandler(handler)
+
+    return logger
+
+
+def main():
+    logger = setup_logger()
+
+    notifier = inotify.adapters.Inotify()
+
+    watch_date = get_current_date()
+    watch_id = change_date(notifier, None, watch_date, logger)
+
+    # main event loop
+    try:
+        for event in notifier.event_gen():
+            if event is not None:
+                # handle event
+                _inotify_event, flags, dirname, basename = event
+                logger.info(f"{basename} arrived")
+                incoming_filename = f"{dirname}/{basename}"
+                raw_dir = f"{RAW_BASEDIR}/{watch_date}"
+                if not os.path.isdir(raw_dir):
+                    os.mkdir(raw_dir)
+                    logger.info(f"created new raw directory {raw_dir}")
+                shutil.copy(incoming_filename, raw_dir)
+                logger.info(f"{basename} copied to {raw_dir}")
+            else:
+                # check for date changes
+                new_current_date = get_current_date()
+                if watch_date != new_current_date:
+                    watch_date = new_current_date
+                    watch_id = change_date(notifier, watch_id, watch_date, logger)
+    except KeyboardInterrupt as e:
+        print()
+
+
+if __name__ == "__main__":
+   main()
