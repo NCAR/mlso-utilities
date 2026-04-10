@@ -15,13 +15,13 @@ WATCH_EVENT_FLAGS = inotify.constants.IN_CLOSE_WRITE
 # [TODO]: should move all of these global variables to a config file
 
 # For testing:
-# INCOMING_BASEDIR = "/home/mgalloy/incoming"
-# RAW_BASEDIR = "/home/mgalloy/raw"
-# LOGGING_BASEDIR = "/home/mgalloy/logging"
+# INCOMING_BASEDIR = "/export/data1/Data/KCor/test-raw/transfer"
+# RAW_BASEDIR = "/export/data1/Data/KCor/test-raw"
+# LOGGING_BASEDIR = "/export/data1/Data/KCor/test-logs"
 
 # Production settings
-INCOMING_BASEDIR = "/hao/dawn/Data/KCor/raw/transfer"
-RAW_BASEDIR = "/hao/dawn/Data/KCor/raw"
+INCOMING_BASEDIR = "/export/data1/Data/KCor/raw/transfer"
+RAW_BASEDIR = "/export/data1/Data/KCor/raw"
 LOGGING_BASEDIR = "/hao/acos/kcor/logs"
 
 LOG_BASENAME_FORMAT = "{date}.kcor.transfer.log"
