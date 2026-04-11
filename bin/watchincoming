@@ -1,5 +1,32 @@
 #!/usr/bin/env python
 
+"""Watches a directory for new files and then copies them to another directory
+when they are completely done writing. This is useful because sometimes files
+are written very slowly, or pause during writing, which causes the pipeline to
+think they are done writing and it starts to process a partial file.
+
+The directories involved and other options are in the file `watchincoming.cfg`
+in the same directory as this script. The config file has sections which
+correspond to the instrument name passed to this script on start up, i.e.:
+
+```console
+$ watchincoming kcor
+```
+
+will use the "kcor" section of `watchincoming.cfg`:
+
+```ini
+[kcor]
+log_basename_format : {date}.kcor.transfer.log
+
+incoming_basedir    : /export/data1/Data/KCor/raw/transfer
+raw_basedir         : /export/data1/Data/KCor/raw
+logging_basedir     : /hao/acos/kcor/logs
+
+full_filesize       : 16782976
+```
+"""
+
 import argparse
 import configparser
 import datetime
@@ -23,7 +50,7 @@ def get_current_date():
 
 def change_date(
     config: configparser.ConfigParser,
-    instrument: str, 
+    instrument: str,
     notifier: inotify.adapters.Inotify,
     old_watch_id: int,
     new_date: str,
@@ -52,7 +79,12 @@ def change_date(
     return new_watch_id
 
 
-def update_handler(config: configparser.ConfigParser, instrument: str, logger: logging.Logger, date: str):
+def update_handler(
+    config: configparser.ConfigParser,
+    instrument: str,
+    logger: logging.Logger,
+    date: str,
+):
     """Update the logging handler to point to use the log file for the next day.
     [TODO]: should look into RotatingFileHandler for this.
     """
@@ -72,8 +104,10 @@ def update_handler(config: configparser.ConfigParser, instrument: str, logger: l
     handler = logging.FileHandler(log_filename)
     handler.setLevel(logging.DEBUG)
 
-    formatter = logging.Formatter(config.get(instrument, "log_format", raw=True),
-                                  config.get(instrument, "log_date_format", raw=True))
+    formatter = logging.Formatter(
+        config.get(instrument, "log_format", raw=True),
+        config.get(instrument, "log_date_format", raw=True),
+    )
     handler.setFormatter(formatter)
 
     logger.addHandler(handler)
@@ -81,7 +115,7 @@ def update_handler(config: configparser.ConfigParser, instrument: str, logger: l
 
 def setup_logger():
     """Setup the logger."""
-    logging.addLevelName(logging.WARNING, "WARN")   # make same format as IDL logs
+    logging.addLevelName(logging.WARNING, "WARN")  # make same format as IDL logs
 
     logger = logging.getLogger("watchincoming")
     logger.setLevel(logging.DEBUG)
@@ -90,10 +124,16 @@ def setup_logger():
 
 
 def main():
+    """Entry point for watchincoming script. Parses command line arguments and
+    starts watching for events.
+    """
     desc = "MLSO incoming data watcher"
     parser = argparse.ArgumentParser(description=desc)
-    parser.add_argument("instrument", type=str,
-                        help="instrument to watch for, e.g., KCor, CoMP, UCoMP, etc.")
+    parser.add_argument(
+        "instrument",
+        type=str,
+        help="instrument to watch for, e.g., KCor, CoMP, UCoMP, etc.",
+    )
     args = parser.parse_args()
 
     config_dirname = os.path.dirname(os.path.realpath(__file__))
@@ -130,14 +170,18 @@ def main():
                     shutil.copy(incoming_filename, raw_dir)
                     logger.info(f"{basename} copied to {raw_dir}")
                 else:
-                    logger.warning(f"{basename} incomplete, {incoming_filesize} != {full_filesize} bytes")
+                    logger.warning(
+                        f"{basename} incomplete, {incoming_filesize} != {full_filesize} bytes"
+                    )
                     logger.warning("not copying")
             else:
                 # check for date changes
                 new_current_date = get_current_date()
                 if watch_date != new_current_date:
                     watch_date = new_current_date
-                    watch_id = change_date(config, instrument, notifier, watch_id, watch_date, logger)
+                    watch_id = change_date(
+                        config, instrument, notifier, watch_id, watch_date, logger
+                    )
     except KeyboardInterrupt as e:
         print()
         logger.info("quitting process")
