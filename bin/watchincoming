@@ -1,5 +1,8 @@
 #!/usr/bin/env python
 
+# [TODO]: handle machine, t1, t2 logs
+# [TODO]: email when data first starts transferring and when logs arrive
+
 """Watches a directory for new files and then copies them to another directory
 when they are completely done writing. This is useful because sometimes files
 are written very slowly, or pause during writing, which causes the pipeline to
@@ -26,19 +29,36 @@ logging_basedir     : /hao/acos/kcor/logs
 full_filesize       : 16782976
 ```
 """
-
 import argparse
 import configparser
 import datetime
+from email.mime.text import MIMEText
 import logging
 import os
 import shutil
+import smtplib
 
 import inotify.adapters
 import inotify.constants
 
 
 WATCH_EVENT_FLAGS = inotify.constants.IN_CLOSE_WRITE
+
+def notify(to: str, subject: str, msg: str, logger: logging.Logger):
+    """Send notication email.
+    """
+    mime_msg = MIMEText(msg)
+    mime_msg["Subject"] = subject
+    mime_msg["From"] = "watchincoming@ucar.edu"
+    mime_msg["To"] = to
+
+    try:
+        s = smtplib.SMTP("localhost")
+        s.send_message(mime_msg)
+        s.quit()
+    except ConnectionRefusedError as e:
+        logger.error(e)
+        logger.error(f"Problem sending email: {msg['Subject']}")
 
 
 def get_current_date():
