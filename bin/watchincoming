@@ -43,6 +43,8 @@ import inotify.constants
 
 
 WATCH_EVENT_FLAGS = inotify.constants.IN_CLOSE_WRITE
+FITS_EXTENSIONS = ["fts", "fits"]
+
 
 def notify(to: str, subject: str, msg: str, logger: logging.Logger):
     """Send notication email.
@@ -56,9 +58,17 @@ def notify(to: str, subject: str, msg: str, logger: logging.Logger):
         s = smtplib.SMTP("localhost")
         s.send_message(mime_msg)
         s.quit()
+        logger.info(f"sent notification to {to}")
     except ConnectionRefusedError as e:
         logger.error(e)
-        logger.error(f"Problem sending email: {msg['Subject']}")
+        logger.error(f"problem sending email: {msg['Subject']}")
+
+
+def check_file(incoming_filename: str, full_filesize: int):
+    incoming_filesize = os.path.getsize(incoming_filename)
+    filename, extension = os.path.splitext(incoming_filename)
+    ok = extension.lower() not in FITS_EXTENSIONS or incoming_filesize == full_filesize
+    return ok, incoming_filesize
 
 
 def get_current_date():
@@ -173,20 +183,30 @@ def main():
     full_filesize = config.getint(instrument, "full_filesize")
     raw_basedir = config.get(instrument, "raw_basedir")
 
+    received_first_file = False
+
     # main event loop
     try:
         for event in notifier.event_gen():
             if event is not None:
                 # handle event
                 _inotify_event, flags, dirname, basename = event
+                if not received_first_file:
+                    notify(
+                        config.get(instrument, "notification_email"),
+                        f"Received {instrument} data for {watch_date}",
+                        f"Received {basename} @ {datetime.datetime.now()}",
+                        logger
+                    )
+                    received_first_file = True
                 logger.info(f"{basename} arrived")
                 incoming_filename = f"{dirname}/{basename}"
                 raw_dir = f"{raw_basedir}/{watch_date}"
                 if not os.path.isdir(raw_dir):
                     os.mkdir(raw_dir)
                     logger.info(f"created new raw directory {raw_dir}")
-                incoming_filesize = os.path.getsize(incoming_filename)
-                if incoming_filesize == full_filesize:
+                ok_file, incoming_filesize = check_file(incoming_filename, full_filesize)
+                if ok_file:
                     shutil.copy(incoming_filename, raw_dir)
                     logger.info(f"{basename} copied to {raw_dir}")
                 else:
@@ -202,6 +222,7 @@ def main():
                     watch_id = change_date(
                         config, instrument, notifier, watch_id, watch_date, logger
                     )
+                    received_first_file = False
     except KeyboardInterrupt as e:
         print()
         logger.info("quitting process")
