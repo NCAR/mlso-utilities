@@ -64,11 +64,12 @@ def notify(to: str, subject: str, msg: str, logger: logging.Logger):
         logger.error(f"problem sending email: {msg['Subject']}")
 
 
-def check_file(incoming_filename: str, full_filesize: int):
+def check_file(incoming_filename: str, full_filesize: int, machine_log_name: str):
     incoming_filesize = os.path.getsize(incoming_filename)
     filename, extension = os.path.splitext(incoming_filename)
+    is_machine_log = os.path.basename(incoming_filename) == machine_log_name
     ok = extension.lower() not in FITS_EXTENSIONS or incoming_filesize == full_filesize
-    return ok, incoming_filesize
+    return ok, is_machine_log, incoming_filesize
 
 
 def get_current_date():
@@ -191,21 +192,17 @@ def main():
             if event is not None:
                 # handle event
                 _inotify_event, flags, dirname, basename = event
-                if not received_first_file:
-                    notify(
-                        config.get(instrument, "notification_email"),
-                        f"Received {instrument} data for {watch_date}",
-                        f"Received {basename} @ {datetime.datetime.now()}",
-                        logger
-                    )
-                    received_first_file = True
                 logger.info(f"{basename} arrived")
                 incoming_filename = f"{dirname}/{basename}"
                 raw_dir = f"{raw_basedir}/{watch_date}"
                 if not os.path.isdir(raw_dir):
                     os.mkdir(raw_dir)
                     logger.info(f"created new raw directory {raw_dir}")
-                ok_file, incoming_filesize = check_file(incoming_filename, full_filesize)
+                ok_file, is_machine_log, incoming_filesize = check_file(
+                    incoming_filename,
+                    full_filesize,
+                    config.get(instrument, "machine_log_format").format(date=watch_date)
+                )
                 if ok_file:
                     shutil.copy(incoming_filename, raw_dir)
                     logger.info(f"{basename} copied to {raw_dir}")
@@ -214,6 +211,21 @@ def main():
                         f"{basename} incomplete, {incoming_filesize} != {full_filesize} bytes"
                     )
                     logger.warning("not copying")
+                if not received_first_file:
+                    notify(
+                        config.get(instrument, "notification_email"),
+                        f"Received {instrument} data for {watch_date}",
+                        f"Received {basename} @ {datetime.datetime.now()}",
+                        logger
+                    )
+                    received_first_file = True
+                if is_machine_log:
+                    notify(
+                        config.get(instrument, "notification_email"),
+                        f"Received {instrument} machine log for {watch_date}",
+                        f"Received {basename} @ {datetime.datetime.now()}",
+                        logger
+                    )
             else:
                 # check for date changes
                 new_current_date = get_current_date()
