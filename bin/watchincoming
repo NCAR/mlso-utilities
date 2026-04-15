@@ -175,6 +175,7 @@ def main():
     instrument = args.instrument.lower()
 
     logger = setup_logger()
+    logger.info("starting service...")
 
     notifier = inotify.adapters.Inotify()
 
