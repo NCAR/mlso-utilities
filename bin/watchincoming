@@ -36,7 +36,9 @@ from email.mime.text import MIMEText
 import logging
 import os
 import shutil
+import signal
 import smtplib
+import sys
 
 import inotify.adapters
 import inotify.constants
@@ -45,8 +47,22 @@ import inotify.constants
 WATCH_EVENT_FLAGS = inotify.constants.IN_CLOSE_WRITE
 FITS_EXTENSIONS = ["fts", "fits"]
 
+logger: logging.Logger = None
 
-def notify(to: str, subject: str, msg: str, logger: logging.Logger):
+
+def handle_exit(sig: int, frame):
+    """Gracefully exit.
+    """
+    signal_name = signal.Signals(sig).name
+    logger.info(f"killed [{signal_name}]")
+    sys.exit(0)
+
+# Register the signal handler for a clean exit
+signal.signal(signal.SIGTERM, handle_exit)
+signal.signal(signal.SIGINT, handle_exit)
+
+
+def notify(to: str, subject: str, msg: str):
     """Send notication email.
     """
     mime_msg = MIMEText(msg)
@@ -85,7 +101,6 @@ def change_date(
     notifier: inotify.adapters.Inotify,
     old_watch_id: int,
     new_date: str,
-    logger: logging.Logger,
 ):
     """Change the current date, i.e., watch the directory corresponding to
     `new_date` and stop watching the old date directory.
@@ -95,7 +110,7 @@ def change_date(
         notifier.remove_watch_with_id(old_watch_id)
         logger.info(f"removing old watch [watch ID: {old_watch_id}]")
 
-    update_handler(config, instrument, logger, new_date)
+    update_handler(config, instrument, new_date)
     logger.info(f"watching for {instrument} data...")
 
     incoming_basedir = config.get(instrument, "incoming_basedir")
@@ -113,7 +128,6 @@ def change_date(
 def update_handler(
     config: configparser.ConfigParser,
     instrument: str,
-    logger: logging.Logger,
     date: str,
 ):
     """Update the logging handler to point to use the log file for the next day.
@@ -146,12 +160,12 @@ def update_handler(
 
 def setup_logger():
     """Setup the logger."""
+    global logger   # change the global logger variable
+
     logging.addLevelName(logging.WARNING, "WARN")  # make same format as IDL logs
 
     logger = logging.getLogger("watchincoming")
     logger.setLevel(logging.DEBUG)
-
-    return logger
 
 
 def main():
@@ -174,13 +188,13 @@ def main():
 
     instrument = args.instrument.lower()
 
-    logger = setup_logger()
+    setup_logger()
     logger.info("starting service...")
 
     notifier = inotify.adapters.Inotify()
 
     watch_date = get_current_date()
-    watch_id = change_date(config, instrument, notifier, None, watch_date, logger)
+    watch_id = change_date(config, instrument, notifier, None, watch_date)
 
     full_filesize = config.getint(instrument, "full_filesize")
     raw_basedir = config.get(instrument, "raw_basedir")
@@ -217,7 +231,6 @@ def main():
                         config.get(instrument, "notification_email"),
                         f"Received {instrument} data for {watch_date}",
                         f"Received {basename} @ {datetime.datetime.now()}",
-                        logger
                     )
                     received_first_file = True
                 if is_machine_log:
@@ -225,7 +238,6 @@ def main():
                         config.get(instrument, "notification_email"),
                         f"Received {instrument} machine log for {watch_date}",
                         f"Received {basename} @ {datetime.datetime.now()}",
-                        logger
                     )
             else:
                 # check for date changes
@@ -233,7 +245,7 @@ def main():
                 if watch_date != new_current_date:
                     watch_date = new_current_date
                     watch_id = change_date(
-                        config, instrument, notifier, watch_id, watch_date, logger
+                        config, instrument, notifier, watch_id, watch_date,
                     )
                     received_first_file = False
     except KeyboardInterrupt as e:
