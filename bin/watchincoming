@@ -230,14 +230,14 @@ def main():
                     notify(
                         config.get(instrument, "notification_email"),
                         f"Received {instrument} data for {watch_date}",
-                        f"Received {basename} @ {datetime.datetime.now()}",
+                        f"Received {basename} @ {datetime.datetime.now():%Y-%m-%dT%H:%M:%S}",
                     )
                     received_first_file = True
                 if is_machine_log:
                     notify(
                         config.get(instrument, "notification_email"),
                         f"Received {instrument} machine log for {watch_date}",
-                        f"Received {basename} @ {datetime.datetime.now()}",
+                        f"Received {basename} @ {datetime.datetime.now():%Y-%m-%dT%H:%M:%S}",
                     )
             else:
                 # check for date changes
