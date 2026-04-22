@@ -47,6 +47,9 @@ import inotify.constants
 WATCH_EVENT_FLAGS = inotify.constants.IN_CLOSE_WRITE
 FITS_EXTENSIONS = ["fts", "fits"]
 
+# rw-rw-r--
+REQUIRED_PERMISSIONS = 0o664
+
 logger: logging.Logger = None
 
 
@@ -220,6 +223,7 @@ def main():
                 )
                 if ok_file:
                     shutil.copy(incoming_filename, raw_dir)
+                    os.chmod(f"{raw_dir}/{basename}", REQUIRED_PERMISSIONS)
                     logger.info(f"{basename} copied to {raw_dir}")
                 else:
                     logger.warning(
