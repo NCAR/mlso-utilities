@@ -42,7 +42,7 @@ import inotify.constants
 
 
 WATCH_EVENT_FLAGS = inotify.constants.IN_CLOSE_WRITE
-FITS_EXTENSIONS = ["fts", "fits"]
+FITS_EXTENSIONS = [".fts", ".fits"]
 
 # rw-rw-r--
 REQUIRED_PERMISSIONS = 0o664
@@ -57,8 +57,9 @@ logger: logging.Logger = None
 - 1.0.3 -- handle SIGTERM and SIGKILL
 - 1.0.4 -- fix permissions and preserve file creation time
 - 1.0.5 -- more debug log messages
+- 1.0.6 -- fix bug in determining FITS files
 """
-VERSION = "1.0.5"
+VERSION = "1.0.6"
 
 
 def handle_exit(sig: int, frame):
@@ -98,9 +99,10 @@ def check_file(incoming_filename: str, full_filesize: int, machine_log_name: str
     logger.debug(f"file size: {incoming_filesize}")
     filename, extension = os.path.splitext(incoming_filename)
     is_machine_log = os.path.basename(incoming_filename) == machine_log_name
-    logger.debug(f"machine log?" + ("YES" if is_machine_log else "NO"))
-    ok = extension.lower() not in FITS_EXTENSIONS or incoming_filesize == full_filesize
-    logger.debug(f"OK?" + ("YES" if ok else "NO"))
+    logger.debug(f"machine log? " + ("YES" if is_machine_log else "NO"))
+    logger.debug(f"FITS file? " + (extension.lower() in FITS_EXTENSIONS))
+    ok = (extension.lower() not in FITS_EXTENSIONS) or (incoming_filesize == full_filesize)
+    logger.debug(f"OK? " + ("YES" if ok else "NO"))
     return ok, is_machine_log, incoming_filesize
 
 
