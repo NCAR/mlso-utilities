@@ -49,6 +49,17 @@ REQUIRED_PERMISSIONS = 0o664
 
 logger: logging.Logger = None
 
+"""Release notes:
+- 1.0.0 -- initial release in production
+- 1.0.1 -- check for file size of FITS files
+- 1.0.2 -- send notification emails when receiving first FITS and log file of
+           the day
+- 1.0.3 -- handle SIGTERM and SIGKILL
+- 1.0.4 -- fix permissions and preserve file creation time
+- 1.0.5 -- more debug log messages
+"""
+VERSION = "1.0.5"
+
 
 def handle_exit(sig: int, frame):
     """Gracefully exit when killed suddenly.
@@ -116,7 +127,7 @@ def change_date(
         logger.info(f"removing old watch [watch ID: {old_watch_id}]")
 
     update_handler(config, instrument, new_date)
-    logger.info(f"watching for {instrument} data...")
+    logger.info(f"watchincoming {VERSION}: watching for {instrument} data...")
 
     incoming_basedir = config.get(instrument, "incoming_basedir")
     incoming_dir = f"{incoming_basedir}/{new_date}"
@@ -136,7 +147,6 @@ def update_handler(
     date: str,
 ):
     """Update the logging handler to point to use the log file for the next day.
-    [TODO]: should look into RotatingFileHandler for this.
     """
     year = date[0:4]
 
@@ -177,7 +187,7 @@ def main():
     """Entry point for watchincoming script. Parses command line arguments and
     starts watching for events.
     """
-    desc = "MLSO incoming data watcher"
+    desc = "MLSO incoming data watcher (watchincoming {VERSION})"
     parser = argparse.ArgumentParser(description=desc)
     parser.add_argument(
         "instrument",
@@ -194,7 +204,7 @@ def main():
     instrument = args.instrument.lower()
 
     setup_logger()
-    logger.info("starting service...")
+    logger.info("watchincoming {VERSION}: starting service...")
 
     notifier = inotify.adapters.Inotify()
 
@@ -231,7 +241,7 @@ def main():
                     logger.info(f"{basename} copied to {raw_dir}")
                 else:
                     logger.warning(
-                        f"{basename} incomplete, {incoming_filesize} != {full_filesize} bytes"
+                        f"{basename} incomplete FITS file, {incoming_filesize} != {full_filesize} bytes"
                     )
                     logger.warning("not copying")
                 if not received_first_file:
