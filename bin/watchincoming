@@ -58,8 +58,9 @@ logger: logging.Logger = None
 - 1.0.4 -- fix permissions and preserve file creation time
 - 1.0.5 -- more debug log messages
 - 1.0.6 -- fix bug in determining FITS files
+- 1.07 -- bug fix
 """
-VERSION = "1.0.6"
+VERSION = "1.0.7"
 
 
 def handle_exit(sig: int, frame):
@@ -100,7 +101,7 @@ def check_file(incoming_filename: str, full_filesize: int, machine_log_name: str
     filename, extension = os.path.splitext(incoming_filename)
     is_machine_log = os.path.basename(incoming_filename) == machine_log_name
     logger.debug(f"machine log? " + ("YES" if is_machine_log else "NO"))
-    logger.debug(f"FITS file? " + (extension.lower() in FITS_EXTENSIONS))
+    logger.debug(f"FITS file? " + ("YES" if extension.lower() in FITS_EXTENSIONS else "NO"))
     ok = (extension.lower() not in FITS_EXTENSIONS) or (incoming_filesize == full_filesize)
     logger.debug(f"OK? " + ("YES" if ok else "NO"))
     return ok, is_machine_log, incoming_filesize
