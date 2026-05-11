@@ -60,8 +60,9 @@ logger: logging.Logger = None
 - 1.0.6 -- fix bug in determining FITS files
 - 1.0.7 -- bug fix
 - 1.0.8 -- fix permissions of any directories created
+- 1.0.9 -- handle missing permissions to create a directory
 """
-VERSION = "1.0.8"
+VERSION = "1.0.9"
 
 
 def handle_exit(sig: int, frame):
@@ -92,6 +93,19 @@ def notify(to: str, subject: str, msg: str):
     except ConnectionRefusedError as e:
         logger.error(e)
         logger.error(f"problem sending email: {msg['Subject']}")
+
+
+def mkdir(path: str):
+    """Create a new directory. Logs errors and makes sure permissions are
+    correct.
+    """
+    try:
+        os.mkdir(incoming_dir)
+        os.chmod(incoming_dir, REQUIRED_PERMISSIONS)
+        return True
+    except PermissionError as e:
+        logger.error(e)
+        return False
 
 
 def check_file(incoming_filename: str, full_filesize: int, machine_log_name: str):
@@ -136,9 +150,9 @@ def change_date(
     incoming_basedir = config.get(instrument, "incoming_basedir")
     incoming_dir = f"{incoming_basedir}/{new_date}"
     if not os.path.isdir(incoming_dir):
-        os.mkdir(incoming_dir)
-        os.chmod(incoming_dir, REQUIRED_PERMISSIONS)
-        logger.info(f"created new incoming directory {incoming_dir}")
+        status = mkdir(incoming_dir)
+        if status:
+            logger.info(f"created new incoming directory {incoming_dir}")
 
     new_watch_id = notifier.add_watch(incoming_dir, WATCH_EVENT_FLAGS)
     logger.info(f"watching {incoming_dir} [watch ID: {new_watch_id}]")
@@ -164,8 +178,7 @@ def update_handler(
     log_dir = f"{logging_basedir}/{year}"
     log_filename = f"{log_dir}/{log_basename}"
     if not os.path.isdir(log_dir):
-        os.mkdir(log_dir)
-        os.chmod(log_dir, REQUIRED_PERMISSIONS)
+        status = mkdir(log_dir)
 
     handler = logging.FileHandler(log_filename)
     handler.setLevel(logging.DEBUG)
@@ -232,9 +245,9 @@ def main():
                 incoming_filename = f"{dirname}/{basename}"
                 raw_dir = f"{raw_basedir}/{watch_date}"
                 if not os.path.isdir(raw_dir):
-                    os.mkdir(raw_dir)
-                    os.chmod(raw_dir, REQUIRED_PERMISSIONS)
-                    logger.info(f"created new raw directory {raw_dir}")
+                    status = mkdir(raw_dir)
+                    if status
+                        logger.info(f"created new raw directory {raw_dir}")
                 ok_file, is_machine_log, incoming_filesize = check_file(
                     incoming_filename,
                     full_filesize,
