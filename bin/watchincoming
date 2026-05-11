@@ -246,7 +246,7 @@ def main():
                 raw_dir = f"{raw_basedir}/{watch_date}"
                 if not os.path.isdir(raw_dir):
                     status = mkdir(raw_dir)
-                    if status
+                    if status:
                         logger.info(f"created new raw directory {raw_dir}")
                 ok_file, is_machine_log, incoming_filesize = check_file(
                     incoming_filename,
