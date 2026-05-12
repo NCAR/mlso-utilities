@@ -45,7 +45,8 @@ WATCH_EVENT_FLAGS = inotify.constants.IN_CLOSE_WRITE
 FITS_EXTENSIONS = [".fts", ".fits"]
 
 # rw-rw-r--
-REQUIRED_PERMISSIONS = 0o664
+FILE_PERMISSIONS = 0o664
+DIR_PERMISSIONS = 0o775
 
 logger: logging.Logger = None
 
@@ -61,8 +62,10 @@ logger: logging.Logger = None
 - 1.0.7 -- bug fix
 - 1.0.8 -- fix permissions of any directories created
 - 1.0.9 -- handle missing permissions to create a directory
+- 1.0.10 -- fix bug in creating a directory
+- 1.0.11 -- use different permissions for a directory and a file
 """
-VERSION = "1.0.9"
+VERSION = "1.0.11"
 
 
 def handle_exit(sig: int, frame):
@@ -100,8 +103,8 @@ def mkdir(path: str):
     correct.
     """
     try:
-        os.mkdir(incoming_dir)
-        os.chmod(incoming_dir, REQUIRED_PERMISSIONS)
+        os.mkdir(path)
+        os.chmod(path, DIR_PERMISSIONS)
         return True
     except PermissionError as e:
         logger.error(e)
@@ -257,7 +260,7 @@ def main():
                     # copy2 preserves metadata such as creation time, but not
                     # owner/group
                     shutil.copy2(incoming_filename, raw_dir)
-                    os.chmod(f"{raw_dir}/{basename}", REQUIRED_PERMISSIONS)
+                    os.chmod(f"{raw_dir}/{basename}", FILE_PERMISSIONS)
                     logger.info(f"{basename} copied to {raw_dir}")
                 else:
                     logger.warning(
