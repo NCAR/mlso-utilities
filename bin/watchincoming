@@ -64,8 +64,9 @@ logger: logging.Logger = None
 - 1.0.9  -- handle missing permissions to create a directory
 - 1.0.10 -- fix bug in creating a directory
 - 1.0.11 -- use different permissions for a directory and a file
+- 1.0.12 -- condense file info log messages
 """
-VERSION = "1.0.11"
+VERSION = "1.0.12"
 
 
 def handle_exit(sig: int, frame):
@@ -117,12 +118,15 @@ def check_file(incoming_filename: str, full_filesize: int, machine_log_name: str
     incoming_filesize = os.path.getsize(incoming_filename)
     logger.debug(f"file size: {incoming_filesize}")
     filename, extension = os.path.splitext(incoming_filename)
+
     is_machine_log = os.path.basename(incoming_filename) == machine_log_name
-    logger.debug(f"machine log? " + ("YES" if is_machine_log else "NO"))
-    logger.debug(f"FITS file? " + ("YES" if extension.lower() in FITS_EXTENSIONS else "NO"))
-    ok = (extension.lower() not in FITS_EXTENSIONS) or (incoming_filesize == full_filesize)
-    logger.debug(f"OK? " + ("YES" if ok else "NO"))
-    return ok, is_machine_log, incoming_filesize
+    is_fits = extension.lower() in FITS_EXTENSIONS
+    is_ok = (not is_fits) or (incoming_filesize == full_filesize)
+
+    s = {True: "YES", False: "NO"}
+    logger.debug(f"machine log: {s[is_machine_log]}, FITS: {s[is_fits]}, OK: {s[is_ok]}")
+
+    return is_ok, is_machine_log, incoming_filesize
 
 
 def get_current_date():
