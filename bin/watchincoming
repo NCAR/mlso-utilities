@@ -51,17 +51,17 @@ DIR_PERMISSIONS = 0o775
 logger: logging.Logger = None
 
 """Release notes:
-- 1.0.0 -- initial release in production
-- 1.0.1 -- check for file size of FITS files
-- 1.0.2 -- send notification emails when receiving first FITS and log file of
-           the day
-- 1.0.3 -- handle SIGTERM and SIGKILL
-- 1.0.4 -- fix permissions and preserve file creation time
-- 1.0.5 -- more debug log messages
-- 1.0.6 -- fix bug in determining FITS files
-- 1.0.7 -- bug fix
-- 1.0.8 -- fix permissions of any directories created
-- 1.0.9 -- handle missing permissions to create a directory
+- 1.0.0  -- initial release in production
+- 1.0.1  -- check for file size of FITS files
+- 1.0.2  -- send notification emails when receiving first FITS and log file of
+            the day
+- 1.0.3  -- handle SIGTERM and SIGKILL
+- 1.0.4  -- fix permissions and preserve file creation time
+- 1.0.5  -- more debug log messages
+- 1.0.6  -- fix bug in determining FITS files
+- 1.0.7  -- bug fix
+- 1.0.8  -- fix permissions of any directories created
+- 1.0.9  -- handle missing permissions to create a directory
 - 1.0.10 -- fix bug in creating a directory
 - 1.0.11 -- use different permissions for a directory and a file
 """
