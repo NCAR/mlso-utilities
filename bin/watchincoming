@@ -124,7 +124,9 @@ def check_file(incoming_filename: str, full_filesize: int, machine_log_name: str
     is_ok = (not is_fits) or (incoming_filesize == full_filesize)
 
     s = {True: "YES", False: "NO"}
-    logger.debug(f"machine log: {s[is_machine_log]}, FITS: {s[is_fits]}, OK: {s[is_ok]}")
+    logger.debug(
+        f"file size: {incoming_filesize}, machine log: {s[is_machine_log]}, FITS: {s[is_fits]}, OK: {s[is_ok]}"
+    )
 
     return is_ok, is_machine_log, incoming_filesize
 
