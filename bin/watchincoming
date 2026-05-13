@@ -215,8 +215,11 @@ def main():
     """Entry point for watchincoming script. Parses command line arguments and
     starts watching for events.
     """
-    desc = "MLSO incoming data watcher (watchincoming {VERSION})"
+    desc = f"MLSO incoming data watcher (watchincoming {VERSION})"
     parser = argparse.ArgumentParser(description=desc)
+    parser.add_argument("-v", "--version",
+                        action="version",
+                        version=desc)
     parser.add_argument(
         "instrument",
         type=str,
