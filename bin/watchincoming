@@ -25,6 +25,15 @@ logging_basedir     : /hao/acos/kcor/logs
 
 full_filesize       : 16782976
 ```
+
+Now that CSMT has made this a system service, you can start, stop, or restart
+with:
+
+```console
+sudo systemctl start watchincoming-kcor
+sudo systemctl stop watchincoming-kcor
+sudo systemctl restart watchincoming-kcor
+```
 """
 import argparse
 import configparser
