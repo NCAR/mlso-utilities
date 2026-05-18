@@ -67,8 +67,9 @@ logger: logging.Logger = None
 - 1.0.12 -- condense file info log messages
 - 1.0.13 -- notifications for incomplete FITS files
 - 1.0.14 -- fix bug in end-of-day report
+- 1.0.15 -- fix bug in relative path in end-of-day report
 """
-VERSION = "1.0.14"
+VERSION = "1.0.15"
 
 
 def handle_exit(sig: int, frame):
@@ -123,7 +124,7 @@ def check_day(
     """Check files for a date."""
     dir = f"{basedir}/{date}"
 
-    files = [f for f in os.listdir(dir) if os.path.isfile(dir + "/" + f)]
+    files = [f for f in [dir + "/" + f for f in os.listdir(dir)] if os.path.isfile(f)]
 
     n_fits_files = 0
     n_incomplete_fits_files = 0
@@ -355,15 +356,19 @@ def main():
                 if watch_date != new_current_date:
                     incoming_basedir = config.get(instrument, "incoming_basedir")
                     # send report of daily transfers
-                    msg = check_day(
-                        instrument,
-                        incoming_basedir,
-                        watch_date,
-                        full_filesize,
-                        config.get(instrument, "machine_log_format").format(
-                            date=watch_date
-                        ),
-                    )
+                    try:
+                        msg = check_day(
+                            instrument,
+                            incoming_basedir,
+                            watch_date,
+                            full_filesize,
+                            config.get(instrument, "machine_log_format").format(
+                                date=watch_date
+                            ),
+                        )
+                    except Exception as e:
+                        msg = ""
+                        logger.error(e)
                     notify(
                         config.get(instrument, "notification_email"),
                         f"Incoming data report for {instrument} on {watch_date}",
@@ -381,6 +386,8 @@ def main():
     except KeyboardInterrupt as e:
         print()
         logger.info("quitting process")
+    except Exception as e:
+        logger.error(e)
 
 
 if __name__ == "__main__":
