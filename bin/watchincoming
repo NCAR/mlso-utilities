@@ -44,6 +44,7 @@ import os
 import shutil
 import signal
 import smtplib
+import socket
 import sys
 
 import inotify.adapters
@@ -290,7 +291,9 @@ def main():
     instrument = args.instrument.lower()
 
     setup_logger()
-    logger.info("watchincoming {VERSION}: starting service...")
+
+    hostname = socket.gethostname()
+    logger.info(f"watchincoming {VERSION}: starting service on {hostname}...")
 
     notifier = inotify.adapters.Inotify()
 
