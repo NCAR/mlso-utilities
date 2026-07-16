@@ -212,7 +212,9 @@ def change_date(
         logger.info(f"removing old watch [watch ID: {old_watch_id}]")
 
     update_handler(config, instrument, new_date)
-    logger.info(f"watchincoming {VERSION}: watching for {instrument} data...")
+
+    hostname = socket.gethostname()
+    logger.info(f"watchincoming {VERSION}: watching for {instrument} data on {hostname}...")
 
     incoming_basedir = config.get(instrument, "incoming_basedir")
     incoming_dir = f"{incoming_basedir}/{new_date}"
