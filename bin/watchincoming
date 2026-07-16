@@ -213,7 +213,7 @@ def change_date(
 
     update_handler(config, instrument, new_date)
 
-    hostname = socket.gethostname()
+    hostname = socket.gethostname().split(".")[0]
     logger.info(f"watchincoming {VERSION}: watching for {instrument} data on {hostname}...")
 
     incoming_basedir = config.get(instrument, "incoming_basedir")
