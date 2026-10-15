@@ -1,7 +1,8 @@
 #!/bin/sh
 
 # update as new versions are released
-URL=https://repo.anaconda.com/archive/Anaconda3-2025.06-0-Linux-x86_64.sh
+URL=https://repo.anaconda.com/archive/Anaconda3-2026.07-1-Linux-x86_64.sh
+#URL=https://repo.anaconda.com/archive/Anaconda3-2025.06-0-Linux-x86_64.sh
 #URL=https://repo.anaconda.com/archive/Anaconda3-2024.10-1-Linux-x86_64.sh
 #URL=https://repo.anaconda.com/archive/Anaconda3-2023.07-2-Linux-x86_64.sh
 #URL=https://repo.anaconda.com/archive/Anaconda3-2023.03-Linux-x86_64.sh
