@@ -348,11 +348,12 @@ def main():
                     logger.warning(
                         f"{basename} incomplete FITS file, {incoming_filesize} != {full_filesize} bytes, not copying"
                     )
-                    notify(
-                        config.get(instrument, "notification_email"),
-                        f"Incomplete FITS file on {watch_date}",
-                        f"{basename} incomplete FITS file, {incoming_filesize} != {full_filesize} bytes",
-                    )
+                    if incoming_filesize != 0:
+                        notify(
+                            config.get(instrument, "notification_email"),
+                            f"Incomplete FITS file on {watch_date}",
+                            f"{basename} incomplete FITS file, {incoming_filesize} != {full_filesize} bytes",
+                        )
                 if not received_first_file:
                     notify(
                         config.get(instrument, "notification_email"),
