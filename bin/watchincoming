@@ -23,6 +23,7 @@ incoming_basedir    : /export/data1/Data/KCor/raw/transfer
 raw_basedir         : /export/data1/Data/KCor/raw
 logging_basedir     : /hao/acos/kcor/logs
 
+machine_log_format  : {date}.kcor.machine.log
 full_filesize       : 16782976
 ```
 
@@ -34,7 +35,11 @@ sudo systemctl start watchincoming-kcor
 sudo systemctl stop watchincoming-kcor
 sudo systemctl restart watchincoming-kcor
 ```
+
+This must be done on the local system of the machine that the files are landing
+on.
 """
+
 import argparse
 import configparser
 import datetime
@@ -46,10 +51,10 @@ import signal
 import smtplib
 import socket
 import sys
+import types
 
 import inotify.adapters
 import inotify.constants
-
 
 WATCH_EVENT_FLAGS = inotify.constants.IN_CLOSE_WRITE | inotify.constants.IN_MOVED_TO
 FITS_EXTENSIONS = [".fts", ".fits"]
@@ -79,13 +84,15 @@ logger: logging.Logger = None
 - 1.0.14 -- fix bug in end-of-day report
 - 1.0.15 -- fix bug in relative path in end-of-day report
 - 1.0.16 -- identify server in log messages
-- 1.0.16 -- handle inotify.constants.IN_MOVED_TO events too
+- 1.0.17 -- handle inotify.constants.IN_MOVED_TO events too
 - 1.0.18 -- better handle odd inotify.constants.IN_CLOSE_WRITE events
+- 1.0.19 -- fix missing incoming_basedir
+- 1.0.20 -- more precise categorizing incoming files
 """
-VERSION = "1.0.18"
+VERSION = "1.0.20"
 
 
-def handle_exit(sig: int, frame):
+def handle_exit(sig: int, frame: types.FrameType | None):
     """Gracefully exit when killed suddenly."""
     signal_name = signal.Signals(sig).name
     logger.info(f"killed [{signal_name}]")
@@ -116,7 +123,8 @@ def notify(to: str, subject: str, msg: str):
 
 def mkdir(path: str):
     """Create a new directory. Logs errors and makes sure permissions are
-    correct.
+    correct. Returns whether it was able to successfully create the directory
+    with the correct permissions.
     """
     try:
         os.mkdir(path)
@@ -175,7 +183,11 @@ machine log {s[machine_log_present]}present
 
 
 def check_file(incoming_filename: str, full_filesize: int, machine_log_name: str):
-    """Check an incoming file to see if it is OK to copy to the raw directory."""
+    """Check an incoming file to see if it is OK to copy to the raw directory.
+    What is not OK to copy to the raw directory:
+        - a FITS file that is not full size
+        - a temporary rsync file, e.g., .20261104_190146_kcor.fts.ebcQf2
+    """
     try:
         incoming_filesize = os.path.getsize(incoming_filename)
     except Exception as e:
@@ -184,21 +196,23 @@ def check_file(incoming_filename: str, full_filesize: int, machine_log_name: str
 
     filename, extension = os.path.splitext(incoming_filename)
 
-    is_machine_log = os.path.basename(incoming_filename) == machine_log_name
+    basename = os.path.basename(incoming_filename)
+    is_temporary = basename[0] == "."
+    is_machine_log = basename == machine_log_name
     is_fits = extension.lower() in FITS_EXTENSIONS
-    is_ok = is_machine_log or (is_fits and (incoming_filesize == full_filesize))
+    is_ok = (not is_temporary) or (is_fits and (incoming_filesize == full_filesize))
 
     s = {True: "YES", False: "NO"}
     logger.info(
         f"file size: {incoming_filesize}, machine log: {s[is_machine_log]}, FITS: {s[is_fits]}, OK: {s[is_ok]}"
     )
 
-    return is_ok, is_machine_log, incoming_filesize
+    return is_ok, is_machine_log, is_fits, is_temporary, incoming_filesize
 
 
 def get_current_date():
-    """Get the current date in the format "YYYYMMDD" as used in the directory name
-    of the watched directory.
+    """Get the current date in the format "YYYYMMDD" as used in the directory
+    name of the watched directory.
     """
     return datetime.datetime.now().strftime("%Y%m%d")
 
@@ -221,7 +235,9 @@ def change_date(
     update_handler(config, instrument, new_date)
 
     hostname = socket.gethostname().split(".")[0]
-    logger.info(f"watchincoming {VERSION}: watching for {instrument} data on {hostname}...")
+    logger.info(
+        f"watchincoming {VERSION}: watching for {instrument} data on {hostname}..."
+    )
 
     incoming_basedir = config.get(instrument, "incoming_basedir")
     incoming_dir = f"{incoming_basedir}/{new_date}"
@@ -283,9 +299,7 @@ def main():
     """
     desc = f"MLSO incoming data watcher (watchincoming {VERSION})"
     parser = argparse.ArgumentParser(description=desc)
-    parser.add_argument("-v", "--version",
-                        action="version",
-                        version=desc)
+    parser.add_argument("-v", "--version", action="version", version=desc)
     parser.add_argument(
         "instrument",
         type=str,
@@ -301,6 +315,8 @@ def main():
     instrument = args.instrument.lower()
 
     setup_logger()
+
+    incoming_basedir = config.get(instrument, "incoming_basedir")
 
     hostname = socket.gethostname()
     logger.info(f"watchincoming {VERSION}: starting service on {hostname}...")
@@ -328,14 +344,18 @@ def main():
                     status = mkdir(raw_dir)
                     if status:
                         logger.info(f"created new raw directory {raw_dir}")
-                ok_file, is_machine_log, incoming_filesize = check_file(
-                    incoming_filename,
-                    full_filesize,
-                    config.get(instrument, "machine_log_format").format(
-                        date=watch_date
-                    ),
+                ok_file, is_machine_log, is_fits, is_temporary, incoming_filesize = (
+                    check_file(
+                        incoming_filename,
+                        full_filesize,
+                        config.get(instrument, "machine_log_format").format(
+                            date=watch_date
+                        ),
+                    )
                 )
-                if ok_file:
+                if is_temporary:
+                    logger.debug(f"ignoring temporary file {basename}")
+                elif ok_file:
                     # copy2 preserves metadata such as creation time, but not
                     # owner/group
                     try:
@@ -344,7 +364,7 @@ def main():
                         logger.info(f"{basename} copied to {raw_dir}")
                     except FileNotFoundError as e:
                         logger.error(e)
-                else:
+                elif is_fits and (incoming_filesize != full_filesize):
                     logger.warning(
                         f"{basename} incomplete FITS file, {incoming_filesize} != {full_filesize} bytes, not copying"
                     )
@@ -354,7 +374,10 @@ def main():
                             f"Incomplete FITS file on {watch_date}",
                             f"{basename} incomplete FITS file, {incoming_filesize} != {full_filesize} bytes",
                         )
-                if not received_first_file:
+                else:
+                    logger.warning(f"unknown file type: {basename}")
+                    logger.warning("this should not happen")
+                if not received_first_file and not is_temporary:
                     notify(
                         config.get(instrument, "notification_email"),
                         f"Received {instrument} data for {watch_date}",
